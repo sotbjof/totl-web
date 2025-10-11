@@ -1,0 +1,13 @@
+{
+  "name": "totl-test",
+  "version": "1.0.0",
+  "description": "Simple test page for Vercel sync",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'Build complete'",
+    "start": "echo 'Server ready'"
+  },
+  "keywords": ["test"],
+  "author": "Jof",
+  "license": "MIT"
+}
