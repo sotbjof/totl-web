@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { getCurrentUser, onDevUserChange } from "../devAuth";
@@ -13,7 +13,6 @@ type LeagueRow = {
 };
 
 export default function TablesPage() {
-  const nav = useNavigate();
   const [me, setMe] = useState(() => getCurrentUser());
   const [rows, setRows] = useState<LeagueRow[]>([]);
   const [loading, setLoading] = useState(true);

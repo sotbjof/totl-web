@@ -46,50 +46,16 @@ type MltRow = {
   form: ("W" | "D" | "L")[]; // oldest->newest; renderer will show last 5
 };
 
-const MAX_GW = 38;
 
 /* =========================
    Helpers
    ========================= */
-function cls(...a: Array<string | false | null | undefined>) {
-  return a.filter(Boolean).join(" ");
-}
 
-function initials(name: string) {
-  const parts = (name || "?").trim().split(/\s+/);
-  if (!parts.length) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 function shortUserId(id: string) {
   return `${id.slice(0, 4)}…${id.slice(-4)}`;
 }
 
-function getTeamInitials(teamName: string): string {
-  try {
-    // Handle empty or null values
-    if (!teamName || teamName.trim() === "") {
-      return "???";
-    }
-    
-    // Handle common team name patterns
-    const words = teamName.trim().split(/\s+/);
-    if (words.length === 1) {
-      // Single word - take first 3 letters
-      return words[0].slice(0, 3).toUpperCase();
-    } else if (words.length === 2) {
-      // Two words - take first letter of each
-      return (words[0][0] + words[1][0]).toUpperCase();
-    } else {
-      // Multiple words - take first letter of first two words
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-  } catch (error) {
-    console.error('Error in getTeamInitials:', error, teamName);
-    return "???";
-  }
-}
 
 function rowToOutcome(r: ResultRowRaw): "H" | "D" | "A" | null {
   if (r.result === "H" || r.result === "D" || r.result === "A") return r.result;
@@ -536,7 +502,6 @@ export default function LeaguePage() {
      ========================= */
 
   function MltTab() {
-    const toEmoji = (c: "W" | "D" | "L") => (c === "W" ? "✅" : c === "D" ? "➖" : "❌");
     const renderForm = (formArr: ("W" | "D" | "L")[]) => {
       const last5 = formArr.slice(-5);
       const pad = 5 - last5.length;
@@ -674,7 +639,6 @@ export default function LeaguePage() {
       );
     }
     // Build outcome map for current GW directly from gw_results
-    const ROW_H = 72; // px — fixed row height for each fixture
     const outcomes = new Map<number, "H" | "D" | "A">(); // fixture_index -> outcome
     results.forEach((r) => {
       if (r.gw !== picksGw) return;
@@ -720,8 +684,6 @@ export default function LeaguePage() {
     const resultsPublished = latestResultsGw !== null && latestResultsGw >= picksGw;
     const remaining = members.filter((m) => !submittedMap.get(`${m.id}:${picksGw}`)).length;
 
-    // Use overflow-hidden for zoneBase
-    const zoneBase = "flex flex-wrap content-start gap-1 items-start overflow-hidden";
 
     return (
       <div className="mt-4">
@@ -807,7 +769,7 @@ export default function LeaguePage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sec.items.map((f, idx) => {
+                      {sec.items.map((f) => {
                         try {
                           // Get team names safely
                           const homeName = f.home_name || f.home_team || "Home";
@@ -1032,7 +994,6 @@ export default function LeaguePage() {
     );
   }
 
-  const myShort = shortUserId(me.id);
 
   return (
     <div className="min-h-screen bg-slate-50">

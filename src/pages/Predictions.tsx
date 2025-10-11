@@ -1,16 +1,9 @@
 // src/pages/Predictions.tsx
-import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { getCurrentUser, onDevUserChange } from "../devAuth";
 import { getMediumName } from "../lib/teamNames";
 
-function initials(name: string) {
-  const parts = (name || "?").trim().split(/\s+/);
-  if (!parts.length) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 function sideName(f: any, side: "home" | "away") {
   const nm = f?.[`${side}_name`];
@@ -56,7 +49,6 @@ type ResultRow = {
 /* -----------------------------------------------
    Helpers
 ------------------------------------------------ */
-const MAX_GW = 38;
 
 function cls(...a: Array<string | false | null | undefined>) {
   return a.filter(Boolean).join(" ");
@@ -136,32 +128,6 @@ function ResultButton({
 /* -----------------------------------------------
    (Legacy) tiny chip – retained if you ever want it
 ------------------------------------------------ */
-function Chip({
-  letter,
-  correct, // null = undecided
-}: {
-  letter: string;
-  correct: boolean | null;
-}) {
-  const tone =
-    correct === null
-      ? "bg-slate-100 text-slate-600 border-slate-200"
-      : correct
-      ? "bg-emerald-600 text-white border-emerald-600"
-      : "bg-slate-50 text-slate-400 border-slate-200";
-  return (
-    <span
-      className={[
-        "inline-flex items-center justify-center h-6 min-w-6 px-2",
-        "rounded-full border text-xs font-semibold mr-1 mb-1",
-        "align-middle",
-        tone,
-      ].join(" ")}
-    >
-      {letter}
-    </span>
-  );
-}
 
 /* -----------------------------------------------
    Page
@@ -178,13 +144,11 @@ export default function PredictionsPage() {
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [justSaved, setJustSaved] = useState<boolean>(false);
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [showSubmitConfirm, setShowSubmitConfirm] = useState<boolean>(false);
 
   const [gwResults, setGwResults] = useState<ResultRow[]>([]);
-  const [nextGwHasFixtures, setNextGwHasFixtures] = useState<boolean>(false);
 
   // Sync GW with server meta and refresh on focus
   useEffect(() => {
@@ -340,7 +304,7 @@ export default function PredictionsPage() {
         .filter(([, v]) => v) // non-null
         .map(([fixture_index, pick]) => ({
           user_id: me.id,
-          gw,
+          gw: gw!,
           fixture_index: Number(fixture_index),
           pick: pick as "H" | "D" | "A",
         }));
@@ -421,7 +385,6 @@ export default function PredictionsPage() {
   }, 0);
 
   // UI
-  const shortId = `${me.id.slice(0, 4)}…${me.id.slice(-4)}`;
 
   if (loading) {
     return (
