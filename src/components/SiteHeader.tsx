@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { getCurrentUser, onDevUserChange } from "../devAuth";
+import { onDevUserChange } from "../devAuth";
 
 /**
  * SiteHeader – gradient header bar with brand, current user, and hamburger menu on mobile.

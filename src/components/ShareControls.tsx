@@ -1,4 +1,6 @@
 
+import { useState } from "react";
+
 /**
  * Small, self-contained copy/share control with a toast.
  * Usage: <ShareControls name={league.name} code={league.code} url={`/league/${league.code}`} />

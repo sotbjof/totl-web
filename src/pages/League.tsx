@@ -51,9 +51,6 @@ type MltRow = {
    ========================= */
 
 
-function shortUserId(id: string) {
-  return `${id.slice(0, 4)}…${id.slice(-4)}`;
-}
 
 function initials(name: string) {
   const parts = (name || "?").trim().split(/\s+/);

@@ -106,12 +106,10 @@ function PickButton({
 ------------------------------------------------ */
 function ResultButton({
   label,
-  picked,
   correct, // true = picked & correct, false = picked & wrong, null = not picked
   isCorrectResult,
 }: {
   label: string;
-  picked: boolean;
   correct: boolean | null;
   isCorrectResult: boolean;
 }) {
@@ -141,15 +139,13 @@ export default function PredictionsPage() {
   const [gw, setGw] = useState<number | null>(null);
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [choices, setChoices] = useState<Record<number, "H" | "D" | "A" | null>>({});
+  const [gwResults, setGwResults] = useState<ResultRow[]>([]);
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [justSaved, setJustSaved] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [showSubmitConfirm, setShowSubmitConfirm] = useState<boolean>(false);
-
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [nextGwHasFixtures, setNextGwHasFixtures] = useState<boolean>(false);
 
   // Sync GW with server meta and refresh on focus
   useEffect(() => {
@@ -256,13 +252,6 @@ export default function PredictionsPage() {
       }
       if (mounted) setGwResults((rs as ResultRow[]) ?? []);
 
-      // 5) does next GW have fixtures yet?
-      const { count: nextCount } = await supabase
-        .from("fixtures")
-        .select("id", { count: "exact", head: true })
-        .eq("gw", gw + 1);
-
-      if (mounted) setNextGwHasFixtures((nextCount ?? 0) > 0);
 
       setLoading(false);
     })();
@@ -318,7 +307,6 @@ export default function PredictionsPage() {
         if (error) throw error;
       }
       // Show transient saved feedback even if there were no new rows to write
-      setLastSavedAt(Date.now());
       setJustSaved(true);
       window.setTimeout(() => setJustSaved(false), 2500);
     } catch (e: any) {
@@ -368,7 +356,7 @@ export default function PredictionsPage() {
 
   // Build outcome map for current GW
   const outcomeByIdx = new Map<number, "H" | "D" | "A">();
-  gwResults.forEach((r) => {
+  gwResults.forEach((r: ResultRow) => {
     const out = outcomeOf(r);
     if (out) outcomeByIdx.set(r.fixture_index, out);
   });
@@ -526,19 +514,16 @@ export default function PredictionsPage() {
                               <>
                                 <ResultButton
                                   label="Home Win"
-                                  picked={picked === "H"}
                                   correct={correctState("H")}
                                   isCorrectResult={decided === "H"}
                                 />
                                 <ResultButton
                                   label="Draw"
-                                  picked={picked === "D"}
                                   correct={correctState("D")}
                                   isCorrectResult={decided === "D"}
                                 />
                                 <ResultButton
                                   label="Away Win"
-                                  picked={picked === "A"}
                                   correct={correctState("A")}
                                   isCorrectResult={decided === "A"}
                                 />
