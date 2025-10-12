@@ -380,14 +380,14 @@ export default function GlobalLeaderboardPage() {
                       {/* Overall tab columns */}
                       {activeTab === "overall" && (
                         <>
-                          <td className="px-4 py-3 text-center tabular-nums font-bold">{r.this_gw}</td>
-                          <td className="px-4 py-3 text-center font-bold">{r.ocp}</td>
+                          <td className="px-4 py-3 text-center tabular-nums font-bold">{'this_gw' in r ? r.this_gw : 0}</td>
+                          <td className="px-4 py-3 text-center font-bold">{'ocp' in r ? r.ocp : 0}</td>
                         </>
                       )}
 
                       {/* Form tab columns (both 5 Week and 10 Week) */}
                       {(activeTab === "form5" || activeTab === "form10") && (
-                        <td className="px-4 py-3 text-center font-bold">{r.formPoints}</td>
+                        <td className="px-4 py-3 text-center font-bold">{'formPoints' in r ? r.formPoints : 0}</td>
                       )}
                     </tr>
                   );
