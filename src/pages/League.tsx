@@ -86,8 +86,8 @@ function Chip({
   const tone =
     correct === null
       ? "bg-slate-100 text-slate-600 border-slate-200"
-      : correct
-      ? "bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 text-white border-2 border-blue-400 shadow-md shadow-purple-500/20 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent before:animate-[shimmer_1.3s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-cyan-200/30 after:to-transparent after:animate-[shimmer_1.7s_ease-in-out_infinite_0.4s]"
+              : correct
+              ? "bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 text-white shadow-xl shadow-yellow-400/40 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s] ring-2 ring-yellow-300/60"
       : "bg-slate-50 text-slate-400 border-slate-200";
 
   return (
@@ -929,7 +929,7 @@ export default function LeaguePage() {
         
         {/* Winner Section */}
         {rows.length > 0 && (
-          <div className="mb-4 p-4 rounded-xl border bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 border-blue-400 shadow-md shadow-purple-500/20 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/30 before:to-transparent before:animate-[shimmer_2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-cyan-200/20 after:to-transparent after:animate-[shimmer_2.5s_ease-in-out_infinite_0.6s]">
+          <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 shadow-xl shadow-yellow-400/40 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent before:animate-[shimmer_2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/30 after:to-transparent after:animate-[shimmer_2.5s_ease-in-out_infinite_0.6s] ring-4 ring-yellow-300/50">
             <div className="text-center relative z-10">
               {rows[0].score === rows[1]?.score && rows[0].unicorns === rows[1]?.unicorns ? (
                 <div className="text-lg font-bold text-white">

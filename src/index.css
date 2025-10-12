@@ -23,12 +23,17 @@ a {
   @apply text-inherit no-underline hover:underline;
 }
 
-/* Custom shimmer animation for shiny soccer sticker effect */
+/* Custom shimmer animation for ultra shiny soccer sticker effect */
 @keyframes shimmer {
   0% {
-    transform: translateX(-100%);
+    transform: translateX(-100%) skewX(-15deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
   }
   100% {
-    transform: translateX(100%);
+    transform: translateX(100%) skewX(-15deg);
+    opacity: 0;
   }
 }

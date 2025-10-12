@@ -116,9 +116,9 @@ function ResultButton({
   const base =
     "h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center select-none";
   
-  // Shiny soccer sticker gradient ONLY for correct picks that the user got right
+  // Ultra shiny soccer sticker gradient ONLY for correct picks that the user got right
   const correctPickStyle = correct === true
-    ? "bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 text-white border-2 border-blue-400 shadow-lg shadow-purple-500/25 transform scale-105 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent before:animate-[shimmer_1.5s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-cyan-200/30 after:to-transparent after:animate-[shimmer_2s_ease-in-out_infinite_0.5s]"
+    ? "bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 text-white !border-0 !border-none shadow-2xl shadow-yellow-400/40 transform scale-110 rotate-1 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s]"
     : isCorrectResult
     ? "bg-emerald-600 text-white border-emerald-600"
     : correct === false

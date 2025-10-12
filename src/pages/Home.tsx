@@ -383,8 +383,8 @@ export default function HomePage() {
 
 
   const Dot: React.FC<{ correct?: boolean }> = ({ correct }) => {
-    if (correct === true) {
-      return <span className="inline-block h-5 w-5 rounded-full bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 border-2 border-blue-400 shadow-lg shadow-purple-500/25 ring-2 ring-blue-300 transform scale-110 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/60 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-cyan-200/40 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.3s]" />;
+          if (correct === true) {
+            return <span className="inline-block h-5 w-5 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 shadow-xl shadow-yellow-400/40 ring-2 ring-yellow-300/60 transform scale-125 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s]" />;
     } else if (correct === false) {
       return <span className="inline-block h-5 w-5 rounded-full bg-red-500 border-2 border-white shadow ring-1 ring-red-300" />;
     } else {
