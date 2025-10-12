@@ -11,6 +11,7 @@ import AdminPage from "./pages/Admin";
 import HomePage from "./pages/Home";
 import GlobalPage from "./pages/Global";
 import CreateLeaguePage from "./pages/CreateLeague";
+import HowToPlayPage from "./pages/HowToPlay";
 import { getCurrentUser, onDevUserChange, setDevUser } from "./devAuth";
 import PredictionsBanner from "./components/PredictionsBanner";
 
@@ -50,6 +51,7 @@ function AppShell() {
               <Link to="/tables" className="text-white no-underline hover:opacity-90 text-xl font-bold">Mini Leagues</Link>
               <Link to="/predictions" className="text-white no-underline hover:opacity-90 text-xl font-bold">Predictions</Link>
               <Link to="/global" className="text-white no-underline hover:opacity-90 text-xl font-bold">Leaderboard</Link>
+              <Link to="/how-to-play" className="text-white no-underline hover:opacity-90 text-xl font-bold">How To Play</Link>
               <Link to="/admin" className="text-white no-underline hover:opacity-90 text-xl font-bold">Admin</Link>
             </div>
 
@@ -95,6 +97,13 @@ function AppShell() {
                   Leaderboard
                 </Link>
                 <Link
+                  to="/how-to-play"
+                  className="text-white no-underline hover:opacity-90 text-xl font-bold"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  How To Play
+                </Link>
+                <Link
                   to="/admin"
                   className="text-white no-underline hover:opacity-90 text-xl font-bold"
                   onClick={() => setMenuOpen(false)}
@@ -117,6 +126,7 @@ function AppShell() {
         <Route path="/league/:code" element={<LeaguePage />} />
         <Route path="/predictions" element={<PredictionsPage />} />
         <Route path="/global" element={<GlobalPage />} />
+        <Route path="/how-to-play" element={<HowToPlayPage />} />
         <Route path="/create-league" element={<CreateLeaguePage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<HomePage />} />

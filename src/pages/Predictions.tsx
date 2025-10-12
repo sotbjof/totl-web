@@ -115,12 +115,17 @@ function ResultButton({
 }) {
   const base =
     "h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center select-none";
-  const tone = isCorrectResult
+  
+  // Shiny soccer sticker gradient ONLY for correct picks that the user got right
+  const correctPickStyle = correct === true
+    ? "bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 text-white border-2 border-blue-400 shadow-lg shadow-purple-500/25 transform scale-105 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent before:animate-[shimmer_1.5s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-cyan-200/30 after:to-transparent after:animate-[shimmer_2s_ease-in-out_infinite_0.5s]"
+    : isCorrectResult
     ? "bg-emerald-600 text-white border-emerald-600"
     : correct === false
     ? "bg-rose-100 text-rose-700 border-rose-200"
     : "bg-slate-50 text-slate-600 border-slate-200";
-  return <div className={[base, tone].join(" ")}>{label}</div>;
+  
+  return <div className={[base, correctPickStyle].join(" ")}>{label}</div>;
 }
 
 /* -----------------------------------------------
