@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { getCurrentUser, onDevUserChange } from "../devAuth";
+import { useAuth } from "../context/AuthContext";
 import { getMediumName } from "../lib/teamNames";
 
 // Types
@@ -26,7 +26,7 @@ type PickRow = { user_id: string; gw: number; fixture_index: number; pick: "H" |
 
 
 export default function HomePage() {
-  const [me, setMe] = useState(getCurrentUser());
+  const { user } = useAuth();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [leagueSubmissions, setLeagueSubmissions] = useState<Record<string, boolean>>({});
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
@@ -42,8 +42,6 @@ export default function HomePage() {
   const [lastScore, setLastScore] = useState<number | null>(null);
   const [lastScoreGw, setLastScoreGw] = useState<number | null>(null);
 
-  // keep dev user switcher in sync
-  useEffect(() => onDevUserChange(setMe), []);
 
   useEffect(() => {
     let alive = true;
@@ -54,7 +52,7 @@ export default function HomePage() {
       const { data: lm } = await supabase
         .from("league_members")
         .select("leagues(id,name,code)")
-        .eq("user_id", me.id);
+        .eq("user_id", user?.id);
 
       const ls: League[] = (lm as any[])?.map((r) => r.leagues).filter(Boolean) ?? [];
 
@@ -93,7 +91,7 @@ export default function HomePage() {
           // fetch results for that GW
           const [{ data: rs2 }, { data: pk2 }] = await Promise.all([
             supabase.from("gw_results").select("fixture_index,result").eq("gw", lastGwWithResults),
-            supabase.from("picks").select("fixture_index,pick").eq("gw", lastGwWithResults).eq("user_id", me.id),
+            supabase.from("picks").select("fixture_index,pick").eq("gw", lastGwWithResults).eq("user_id", user?.id),
           ]);
 
           const outMap2 = new Map<number, "H" | "D" | "A">();
@@ -161,7 +159,7 @@ export default function HomePage() {
         const { data: pk } = await supabase
           .from("picks")
           .select("user_id,gw,fixture_index,pick")
-          .eq("user_id", me.id)
+          .eq("user_id", user?.id)
           .eq("gw", currentGw);
         userPicks = (pk as PickRow[]) ?? [];
       }
@@ -171,7 +169,7 @@ export default function HomePage() {
         const { data: sb } = await supabase
           .from("gw_submissions")
           .select("user_id")
-          .eq("user_id", me.id)
+          .eq("user_id", user?.id)
           .eq("gw", currentGw)
           .maybeSingle();
         submitted = !!sb;
@@ -261,7 +259,7 @@ export default function HomePage() {
     return () => {
       alive = false;
     };
-  }, [me.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     let alive = true;
@@ -294,7 +292,7 @@ export default function HomePage() {
           const { data: rk } = await supabase
             .from("overall_ranks")
             .select("rank")
-            .eq("user_id", me.id)
+            .eq("user_id", user?.id)
             .maybeSingle();
           if (alive && rk?.rank != null) {
             setGlobalRank(rk.rank as number);
@@ -309,7 +307,7 @@ export default function HomePage() {
             .select("user_id, ocp")
             .order("ocp", { ascending: false });
           if (alive && Array.isArray(ocps) && ocps.length) {
-            const idx = ocps.findIndex((row: any) => row.user_id === me.id);
+            const idx = ocps.findIndex((row: any) => row.user_id === user?.id);
             if (idx !== -1) {
               setGlobalRank(idx + 1);
               return; // done
@@ -342,14 +340,14 @@ export default function HomePage() {
 
           if (scores.size) {
             const ordered = Array.from(scores.entries()).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
-            const myIndex = ordered.findIndex(([uid]) => uid === me.id);
+            const myIndex = ordered.findIndex(([uid]) => uid === user?.id);
             if (alive && myIndex !== -1) setGlobalRank(myIndex + 1);
           }
         } catch (_) { /* ignore */ }
       } finally { /* no-op */ }
     })();
     return () => { alive = false; };
-  }, [me.id]);
+  }, [user?.id]);
 
   const Section: React.FC<{
     title: string;
@@ -531,7 +529,7 @@ export default function HomePage() {
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
             Games
           </h2>
-          {!gwSubmitted && gwScore === null && (
+          {fixtures.length > 0 && !gwSubmitted && gwScore === null && (
             <div>
               <Link to="/predictions" className="inline-block px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 transition-colors no-underline">Do your predictions</Link>
             </div>

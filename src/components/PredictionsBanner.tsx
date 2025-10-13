@@ -121,6 +121,11 @@ export default function PredictionsBanner() {
       refreshBanner();
     };
     
+    // Listen for fixtures published events
+    const handleFixturesPublished = () => {
+      refreshBanner();
+    };
+    
     // Refresh when component becomes visible (user navigates back)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -130,12 +135,14 @@ export default function PredictionsBanner() {
     
     window.addEventListener('predictionsSubmitted', handleSubmission);
     window.addEventListener('resultsPublished', handleResultsPublished);
+    window.addEventListener('fixturesPublished', handleFixturesPublished);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
       alive = false;
       window.removeEventListener('predictionsSubmitted', handleSubmission);
       window.removeEventListener('resultsPublished', handleResultsPublished);
+      window.removeEventListener('fixturesPublished', handleFixturesPublished);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [me.id]);
@@ -167,7 +174,7 @@ export default function PredictionsBanner() {
       ) : (
         <div className="mt-4 rounded-lg bg-slate-100 px-4 py-3 border border-slate-200">
           <div className="text-center">
-            <div className="font-semibold text-slate-800">GW{(currentGw || 0) + 1} Coming Soon</div>
+            <div className="font-semibold text-slate-800">GW{currentGw || 1} Coming Soon</div>
             <div className="text-sm text-slate-600">Fixtures will be published soon.</div>
           </div>
         </div>

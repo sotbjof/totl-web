@@ -1,7 +1,7 @@
 // src/pages/Global.tsx
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { getCurrentUser, onDevUserChange } from "../devAuth";
+import { useAuth } from "../context/AuthContext";
 
 type OverallRow = {
   user_id: string;
@@ -16,8 +16,7 @@ type GwPointsRow = {
 };
 
 export default function GlobalLeaderboardPage() {
-  const [me, setMe] = useState(getCurrentUser());
-  useEffect(() => onDevUserChange(setMe), []);
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>("");
@@ -326,7 +325,7 @@ export default function GlobalLeaderboardPage() {
               </thead>
               <tbody>
                 {(activeTab === "overall" ? rows : activeTab === "form5" ? form5Rows : form10Rows).map((r, i) => {
-                  const isMe = r.user_id === me.id;
+                  const isMe = r.user_id === user?.id;
                   const zebra = isMe ? "" : (i % 2 === 0 ? "bg-white" : "bg-slate-50");
                   const highlight = isMe ? "bg-emerald-200" : "";
 
@@ -349,7 +348,7 @@ export default function GlobalLeaderboardPage() {
                         indicatorClass = "bg-gray-400";
                       }
                     } else if (curr && !prev) {
-                      indicator = "NEW"; // new entrant
+                      indicator = ""; // new entrant - empty blue dot
                       indicatorClass = "bg-blue-500 text-white";
                     }
                   }
@@ -396,6 +395,14 @@ export default function GlobalLeaderboardPage() {
             </table>
           </div>
         )}
+        
+        {/* Key for indicators */}
+        <div className="mt-4 flex justify-center">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <span>New Player</span>
+          </div>
+        </div>
       </div>
     </div>
   );

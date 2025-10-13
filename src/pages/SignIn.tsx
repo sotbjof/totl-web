@@ -27,6 +27,19 @@ export default function SignIn() {
     setBusy(true);
     try {
       if (mode === 'signup') {
+        // Check if username is already taken
+        const { data: existingUsers, error: checkError } = await supabase
+          .from('users')
+          .select('name')
+          .eq('name', displayName.trim())
+          .limit(1);
+        
+        if (checkError) throw checkError;
+        
+        if (existingUsers && existingUsers.length > 0) {
+          throw new Error('Username already taken. Please choose a different name.');
+        }
+        
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -62,7 +75,7 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+    <div className="min-h-screen flex items-start justify-center bg-gray-50 p-6 pt-20">
       <form onSubmit={onSubmit} className="w-full max-w-md rounded-2xl border bg-white p-6 shadow space-y-4">
         <h1 className="text-xl font-bold">{mode === 'signup' ? 'Create your account' : 'Sign in'}</h1>
 

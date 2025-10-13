@@ -189,6 +189,9 @@ export default function AdminPage() {
         setFixtures(data as Fixture[]);
       }
       setOk("Fixtures saved!");
+      
+      // Dispatch event to notify PredictionsBanner that fixtures have been published
+      window.dispatchEvent(new CustomEvent('fixturesPublished'));
     } catch (e: any) {
       setError(e.message ?? "Failed to save fixtures.");
     } finally {

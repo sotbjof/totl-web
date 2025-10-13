@@ -2,10 +2,8 @@
 export type DevUser = { id: string; name: string; short?: string };
 
 export const DEV_USERS: DevUser[] = [
-  { id: "11111111-1111-1111-1111-111111111111", name: "Admin", short: "AD" },
-  { id: "22222222-2222-2222-2222-222222222222", name: "Jof",   short: "J"  },
-  { id: "33333333-3333-3333-3333-333333333333", name: "Paul",  short: "P"  },
-  { id: "44444444-4444-4444-4444-444444444444", name: "Ben",   short: "B"  },
+  { id: "4542c037-5b38-40d0-b189-847b8f17c222", name: "Jof", short: "J" },
+  { id: "f8a1669e-2512-4edf-9c21-b9f87b3efbe2", name: "Carl", short: "C" },
 ];
 
 const LS_KEY = "totl:dev_user";
@@ -19,7 +17,7 @@ export function getCurrentUser(): DevUser {
       if (found) return found;
     }
   } catch {}
-  // default to Admin
+  // default to Jof (new admin)
   const def = DEV_USERS[0];
   localStorage.setItem(LS_KEY, JSON.stringify({ id: def.id }));
   return def;

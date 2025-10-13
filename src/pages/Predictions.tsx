@@ -1,7 +1,7 @@
 // src/pages/Predictions.tsx
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { getCurrentUser, onDevUserChange } from "../devAuth";
+import { useAuth } from "../context/AuthContext";
 import { getMediumName } from "../lib/teamNames";
 
 
@@ -138,9 +138,7 @@ function ResultButton({
    Page
 ------------------------------------------------ */
 export default function PredictionsPage() {
-  // “Auth” (dev)
-  const [me, setMe] = useState(getCurrentUser());
-  useEffect(() => onDevUserChange(setMe), []);
+  const { user } = useAuth();
 
   // State
   const [gw, setGw] = useState<number | null>(null);
@@ -171,7 +169,7 @@ export default function PredictionsPage() {
       alive = false;
       window.removeEventListener("focus", onFocus);
     };
-  }, [me.id]);
+  }, [user?.id]);
 
   // Load fixtures + my picks + submission when GW or user changes
   useEffect(() => {
@@ -218,7 +216,7 @@ export default function PredictionsPage() {
         .from("picks")
         .select("gw, fixture_index, pick")
         .eq("gw", gw)
-        .eq("user_id", me.id);
+        .eq("user_id", user?.id);
 
       if (pkErr) {
         if (mounted) {
@@ -239,7 +237,7 @@ export default function PredictionsPage() {
         .from("gw_submissions")
         .select("gw, submitted_at")
         .eq("gw", gw)
-        .eq("user_id", me.id)
+        .eq("user_id", user?.id)
         .maybeSingle();
 
       if (subErr) {
@@ -266,7 +264,7 @@ export default function PredictionsPage() {
     return () => {
       mounted = false;
     };
-  }, [gw, me.id]);
+  }, [gw, user?.id]);
 
   // Group fixtures by calendar day for section headers
   const grouped = useMemo(() => {
@@ -300,7 +298,7 @@ export default function PredictionsPage() {
       const rows: PickRow[] = Object.entries(choices)
         .filter(([, v]) => v) // non-null
         .map(([fixture_index, pick]) => ({
-          user_id: me.id,
+          user_id: user?.id,
           gw: gw!,
           fixture_index: Number(fixture_index),
           pick: pick as "H" | "D" | "A",
@@ -346,7 +344,7 @@ export default function PredictionsPage() {
 
     const { error } = await supabase
       .from("gw_submissions")
-      .upsert([{ user_id: me.id, gw, submitted_at: new Date().toISOString() }], {
+      .upsert([{ user_id: user?.id, gw, submitted_at: new Date().toISOString() }], {
         onConflict: "user_id,gw",
       });
 
@@ -423,10 +421,6 @@ export default function PredictionsPage() {
                 {myScore}
               </div>
             </div>
-          </div>
-        ) : !fixtures.length ? (
-          <div className="rounded-xl border bg-slate-50 border-slate-200 px-4 py-3 text-slate-700">
-            GW coming soon — fixtures will appear here once they're published.
           </div>
         ) : null}
 
