@@ -11,16 +11,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.57.4",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "@supabase/auth-ui-react": "^0.4.7",
+    "@supabase/auth-ui-shared": "^0.1.8",
+    "@supabase/supabase-js": "^2.75.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "react-router-dom": "^7.9.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "@types/react": "^19.1.13",
-    "@types/react-dom": "^19.1.9",
+    "@types/react": "18.3.5",
+    "@types/react-dom": "18.3.0",
     "@vitejs/plugin-react": "^5.0.3",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",

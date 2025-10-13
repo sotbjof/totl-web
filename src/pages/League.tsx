@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { getCurrentUser, onDevUserChange } from "../devAuth";
+import { useAuth } from "../context/AuthContext";
+
+const MAX_MEMBERS = 10;
 
 /* =========================
    Types
@@ -51,7 +53,6 @@ type MltRow = {
    ========================= */
 
 
-
 function initials(name: string) {
   const parts = (name || "?").trim().split(/\s+/);
   if (!parts.length) return "?";
@@ -86,8 +87,8 @@ function Chip({
   const tone =
     correct === null
       ? "bg-slate-100 text-slate-600 border-slate-200"
-              : correct
-              ? "bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 text-white shadow-xl shadow-yellow-400/40 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s] ring-2 ring-yellow-300/60"
+      : correct
+      ? "bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 text-white shadow-xl shadow-yellow-400/40 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s] ring-2 ring-yellow-300/60"
       : "bg-slate-50 text-slate-400 border-slate-200";
 
   return (
@@ -111,8 +112,7 @@ function Chip({
    ========================= */
 export default function LeaguePage() {
   const { code = "" } = useParams();
-  const [me, setMe] = useState(getCurrentUser());
-  useEffect(() => onDevUserChange(setMe), []);
+  const { user } = useAuth();
 
   const [league, setLeague] = useState<League | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -128,6 +128,8 @@ export default function LeaguePage() {
   const [selectedGw, setSelectedGw] = useState<number | null>(null);  // for GW switcher
   const [availableGws, setAvailableGws] = useState<number[]>([]);     // available weeks with results
   const [showGwDropdown, setShowGwDropdown] = useState(false);         // for custom dropdown
+
+  const [showInvite, setShowInvite] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -242,7 +244,7 @@ export default function LeaguePage() {
 
   /* ---------- leave league function ---------- */
   async function leaveLeague() {
-    if (!league) return;
+    if (!league || !user?.id) return;
     
     setLeaving(true);
     try {
@@ -250,7 +252,7 @@ export default function LeaguePage() {
         .from("league_members")
         .delete()
         .eq("league_id", league.id)
-        .eq("user_id", me.id);
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
@@ -1051,10 +1053,17 @@ export default function LeaguePage() {
             </h1>
             
             <div className="mt-0 mb-6 text-base text-slate-500">
-              Code: <span className="font-mono font-semibold">{league.code}</span> · {members.length} member{members.length === 1 ? "" : "s"}
+              Code: <span className="font-mono font-semibold">{league.code}</span> · {members.length}/{MAX_MEMBERS} member{members.length === 1 ? "" : "s"}
             </div>
             
             <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => setShowInvite(true)}
+                className="px-3 py-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors text-sm font-medium"
+                title="Invite players"
+              >
+                ➕ Invite
+              </button>
               <button
                 onClick={shareLeague}
                 className="px-3 py-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors text-sm font-medium"
@@ -1168,6 +1177,44 @@ export default function LeaguePage() {
           </div>
         )}
       </div>
+
+      {/* Invite Modal */}
+      {showInvite && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Invite players</h3>
+            <p className="text-slate-600 text-sm">
+              Share this code (up to {MAX_MEMBERS} members):
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <code className="font-mono text-lg font-bold">{league.code}</code>
+              <button
+                onClick={() => { navigator.clipboard.writeText(league.code); }}
+                className="px-3 py-1.5 border rounded-md text-sm hover:bg-slate-50"
+              >
+                Copy
+              </button>
+              <button
+                onClick={shareLeague}
+                className="px-3 py-1.5 border rounded-md text-sm hover:bg-slate-50"
+              >
+                Share
+              </button>
+            </div>
+            <div className="mt-3 text-xs text-slate-500">
+              {members.length}/{MAX_MEMBERS} members
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowInvite(false)}
+                className="px-4 py-2 border border-slate-300 rounded-md hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Leave League Confirmation Modal */}
       {showLeaveConfirm && (
