@@ -383,9 +383,11 @@ export default function HomePage() {
     </div>
   );
 
-  const gamesHeaderRight = !gwSubmitted && gwScore === null ? (
-    <Link to="/predictions" className="inline-block px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 transition-colors no-underline">Do your predictions</Link>
-  ) : null;
+  const gamesSubtitle = (
+    <div className="text-slate-700 font-semibold text-lg mt-4 mb-0">
+      {/* ... */}
+    </div>
+  );
 
   const LeaderCard: React.FC<{
     title: string;
