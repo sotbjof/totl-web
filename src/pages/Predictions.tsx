@@ -125,7 +125,9 @@ function ResultButton({
     ? "bg-rose-100 text-rose-700 border-rose-200"
     : "bg-slate-50 text-slate-600 border-slate-200";
   
-  return <div className={[base, correctPickStyle].join(" ")}>{label}</div>;
+  return <div className={[base, correctPickStyle].join(" ")}>
+    <span className={correct === true ? "font-bold" : ""}>{label}</span>
+  </div>;
 }
 
 /* -----------------------------------------------

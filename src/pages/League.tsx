@@ -119,12 +119,33 @@ export default function LeaguePage() {
   const [loading, setLoading] = useState(true);
 
   // tabs: Mini League Table / GW Picks / GW Results
-  const [tab, setTab] = useState<"mlt" | "gw" | "gwr">("mlt");
+  const [tab, setTab] = useState<"mlt" | "gw" | "gwr">("gwr");
   const [showForm, setShowForm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [currentGw, setCurrentGw] = useState<number | null>(null);      // for GW Picks
   const [latestResultsGw, setLatestResultsGw] = useState<number | null>(null); // for GW Results
+  const [selectedGw, setSelectedGw] = useState<number | null>(null);  // for GW switcher
+  const [availableGws, setAvailableGws] = useState<number[]>([]);     // available weeks with results
+  const [showGwDropdown, setShowGwDropdown] = useState(false);         // for custom dropdown
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showGwDropdown && !target.closest('.gw-dropdown-container')) {
+        setShowGwDropdown(false);
+      }
+    };
+    
+    if (showGwDropdown) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showGwDropdown]);
 
   /* ---------- load current GW (for picks) and latest results GW (for results tab) ---------- */
   useEffect(() => {
@@ -147,6 +168,20 @@ export default function LeaguePage() {
         .limit(1);
       if (!alive) return;
       setLatestResultsGw((rs && rs.length ? (rs[0] as any).gw : null));
+
+      // fetch all available game weeks with results for switcher
+      const { data: allGws } = await supabase
+        .from("gw_results")
+        .select("gw")
+        .order("gw", { ascending: false });
+      if (!alive) return;
+      const gwList = allGws ? [...new Set(allGws.map((r: any) => r.gw))].sort((a, b) => b - a) : [];
+      setAvailableGws(gwList);
+      
+      // set initial selected week to latest results week
+      if (gwList.length > 0) {
+        setSelectedGw(gwList[0]);
+      }
     })();
     return () => { alive = false; };
   }, []);
@@ -260,7 +295,7 @@ export default function LeaguePage() {
     let alive = true;
 
     (async () => {
-      const gwForData = tab === "gwr" ? latestResultsGw : currentGw;
+      const gwForData = tab === "gwr" ? selectedGw : (tab === "gw" ? selectedGw : currentGw);
       if (!gwForData) {
         setFixtures([]);
         setPicks([]);
@@ -319,7 +354,7 @@ export default function LeaguePage() {
     return () => {
       alive = false;
     };
-  }, [tab, currentGw, latestResultsGw, memberIds]);
+  }, [tab, currentGw, latestResultsGw, selectedGw, memberIds]);
 
   const submittedMap = useMemo(() => {
     const m = new Map<string, boolean>();
@@ -633,11 +668,11 @@ export default function LeaguePage() {
   }
 
   function GwPicksTab() {
-    const picksGw = currentGw;
+    const picksGw = selectedGw;
     if (!picksGw) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
-          No active gameweek yet.
+          No game week selected.
         </div>
       );
     }
@@ -870,11 +905,11 @@ export default function LeaguePage() {
   }
 
   function GwResultsTab() {
-    const resGw = latestResultsGw;
+    const resGw = selectedGw;
     if (!resGw) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
-          No results have been recorded yet.
+          No game week selected.
         </div>
       );
     }
@@ -929,7 +964,7 @@ export default function LeaguePage() {
         
         {/* Winner Section */}
         {rows.length > 0 && (
-          <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 shadow-xl shadow-yellow-400/40 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent before:animate-[shimmer_2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/30 after:to-transparent after:animate-[shimmer_2.5s_ease-in-out_infinite_0.6s] ring-4 ring-yellow-300/50">
+          <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 shadow-2xl shadow-slate-600/50 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent before:animate-[shimmer_2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/30 after:to-transparent after:animate-[shimmer_2.5s_ease-in-out_infinite_0.6s]">
             <div className="text-center relative z-10">
               {rows[0].score === rows[1]?.score && rows[0].unicorns === rows[1]?.unicorns ? (
                 <div className="text-lg font-bold text-white">
@@ -1056,7 +1091,7 @@ export default function LeaguePage() {
                   : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
-              {latestResultsGw ? `GW ${latestResultsGw} Results` : "GW Results"}
+              {selectedGw ? `GW ${selectedGw} Results` : "GW Results"}
             </button>
             <button
               onClick={() => setTab("gw")}
@@ -1067,7 +1102,7 @@ export default function LeaguePage() {
                   : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
-              {currentGw ? `GW ${currentGw} Picks` : "GW Picks"}
+              {selectedGw ? `GW ${selectedGw} Picks` : "GW Picks"}
             </button>
             <button
               onClick={() => setTab("mlt")}
@@ -1083,11 +1118,55 @@ export default function LeaguePage() {
           </div>
         </div>
 
+
         <div className="mt-6">
           {tab === "mlt" && <MltTab />}
           {tab === "gw" && <GwPicksTab />}
           {tab === "gwr" && <GwResultsTab />}
         </div>
+
+        {/* Game Week Switcher - only show for GW tabs, positioned below content */}
+        {(tab === "gw" || tab === "gwr") && availableGws.length > 0 && (
+          <div className="mt-6 flex items-center justify-center">
+            <div className="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-4 py-2 shadow-sm">
+              <span className="text-sm font-medium text-slate-600">Game Week:</span>
+              <div className="relative gw-dropdown-container">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowGwDropdown(!showGwDropdown);
+                  }}
+                  className="text-sm font-semibold text-slate-900 bg-transparent border-none outline-none cursor-pointer py-1 px-2 min-w-[100px] text-left flex items-center justify-between"
+                >
+                  {selectedGw ? `GW ${selectedGw}` : "Select GW"}
+                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showGwDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 min-w-[140px]">
+                    {availableGws.map((gw) => (
+                      <button
+                        key={gw}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedGw(gw);
+                          setShowGwDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 text-base font-medium hover:bg-slate-50 transition-colors ${
+                          selectedGw === gw ? 'bg-blue-50 text-blue-700' : 'text-slate-900'
+                        }`}
+                      >
+                        GW {gw}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Leave League Confirmation Modal */}
