@@ -291,14 +291,14 @@ export default function PredictionsPage() {
   }
 
   async function saveGW() {
-    if (submitted) return;
+    if (submitted || !user?.id) return;
     setSaving(true);
     setError("");
     try {
       const rows: PickRow[] = Object.entries(choices)
         .filter(([, v]) => v) // non-null
         .map(([fixture_index, pick]) => ({
-          user_id: user?.id,
+          user_id: user.id,
           gw: gw!,
           fixture_index: Number(fixture_index),
           pick: pick as "H" | "D" | "A",
