@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { onDevUserChange } from "../devAuth";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * SiteHeader – gradient header bar with brand, current user, and hamburger menu on mobile.
@@ -9,6 +10,10 @@ import { onDevUserChange } from "../devAuth";
  */
 export default function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAuth();
+  
+  // Admin user ID (Jof)
+  const isAdmin = user?.id === '4542c037-5b38-40d0-b189-847b8f17c222';
 
   useEffect(() => onDevUserChange(() => {}), []);
 
@@ -38,7 +43,7 @@ export default function SiteHeader() {
             <Item to="/leagues">Mini Leagues</Item>
             <Item to="/predictions">Predictions</Item>
             <Item to="/global">Global</Item>
-            <Item to="/admin">Admin</Item>
+            {isAdmin && <Item to="/admin">Admin</Item>}
           </nav>
 
           {/* Hamburger menu */}
@@ -64,7 +69,7 @@ export default function SiteHeader() {
             <Item to="/leagues">Mini Leagues</Item>
             <Item to="/predictions">Predictions</Item>
             <Item to="/global">Global</Item>
-            <Item to="/admin">Admin</Item>
+            {isAdmin && <Item to="/admin">Admin</Item>}
           </div>
         </div>
       )}

@@ -9,6 +9,7 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showEmailMessage, setShowEmailMessage] = useState(false);
   const nav = useNavigate();
 
   async function upsertProfile(userId: string, name?: string) {
@@ -52,8 +53,9 @@ export default function SignIn() {
 
         const user = data.user ?? (await supabase.auth.getUser()).data.user;
         if (user) await upsertProfile(user.id, displayName);
-        // If confirmations are on, user must confirm via email first.
-        nav('/', { replace: true });
+        
+        // Show email confirmation message instead of navigating away
+        setShowEmailMessage(true);
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -72,6 +74,30 @@ export default function SignIn() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (showEmailMessage) {
+    return (
+      <div className="min-h-screen flex items-start justify-center bg-gray-50 p-6 pt-20">
+        <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow space-y-4">
+          <h1 className="text-xl font-bold text-center">Check Your Email</h1>
+          <div className="text-center space-y-3">
+            <p className="text-slate-600">
+              We've sent you a confirmation link at <strong>{email}</strong>
+            </p>
+            <p className="text-sm text-slate-500">
+              Click the link in your email to activate your account and start playing TOTL!
+            </p>
+            <button
+              onClick={() => setShowEmailMessage(false)}
+              className="mt-4 px-4 py-2 text-sm text-emerald-600 hover:text-emerald-700 underline"
+            >
+              Back to signup
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

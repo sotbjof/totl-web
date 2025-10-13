@@ -43,6 +43,7 @@ function AppContent({ menuOpen, setMenuOpen, me, shortId }: {
   shortId: (id: string) => string; 
 }) {
   const location = useLocation();
+  const { showWelcome, dismissWelcome } = useAuth();
   
   return (
     <>
@@ -142,6 +143,25 @@ function AppContent({ menuOpen, setMenuOpen, me, shortId }: {
 
       {/* Global Predictions Banner - hide on auth page */}
       {location.pathname !== '/auth' && <PredictionsBanner />}
+
+      {/* Welcome Message */}
+      {showWelcome && (
+        <div className="fixed top-40 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-600 text-white px-8 py-5 rounded-lg shadow-lg w-11/12 max-w-4xl">
+          <div className="relative">
+            <div className="text-center pr-10">
+              <div className="font-bold text-xl">Welcome to TOTL!</div>
+              <div className="text-sm text-emerald-100 mt-1">Your account is now active. Start making predictions!</div>
+            </div>
+            <button
+              onClick={dismissWelcome}
+              className="absolute top-0 right-0 text-emerald-200 hover:text-white text-2xl font-bold"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Routes */}
       <Routes>

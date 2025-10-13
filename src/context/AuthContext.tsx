@@ -7,6 +7,8 @@ type AuthState = {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  showWelcome: boolean;
+  dismissWelcome: () => void;
 };
 
 const AuthCtx = createContext<AuthState>({
@@ -14,12 +16,15 @@ const AuthCtx = createContext<AuthState>({
   session: null,
   loading: true,
   signOut: async () => {},
+  showWelcome: false,
+  dismissWelcome: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -31,10 +36,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
       setLoading(false);
+      
+      // Show welcome message when user signs in via email confirmation
+      if (event === 'SIGNED_IN' && sess?.user) {
+        const wasJustConfirmed = !session && sess.user.email_confirmed_at;
+        if (wasJustConfirmed) {
+          setShowWelcome(true);
+        }
+      }
     });
 
     return () => {
@@ -47,8 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   }
 
+  function dismissWelcome() {
+    setShowWelcome(false);
+  }
+
   return (
-    <AuthCtx.Provider value={{ user, session, loading, signOut }}>
+    <AuthCtx.Provider value={{ user, session, loading, signOut, showWelcome, dismissWelcome }}>
       {children}
     </AuthCtx.Provider>
   );
