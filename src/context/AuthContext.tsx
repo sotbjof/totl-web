@@ -41,11 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(sess?.user ?? null);
       setLoading(false);
       
-      // Show welcome message when user signs in via email confirmation
+      // Show welcome message only when user signs in via email confirmation (new users)
       if (event === 'SIGNED_IN' && sess?.user) {
-        const wasJustConfirmed = !session && sess.user.email_confirmed_at;
-        if (wasJustConfirmed) {
+        // Check if this is a fresh email confirmation (not just a regular login)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isEmailConfirmation = urlParams.get('type') === 'signup' || 
+                                  window.location.hash.includes('access_token') ||
+                                  urlParams.get('confirmation_token');
+        
+        if (isEmailConfirmation && sess.user.email_confirmed_at) {
           setShowWelcome(true);
+          // Clean up the URL to remove confirmation parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
         }
       }
     });
