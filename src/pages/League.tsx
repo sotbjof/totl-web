@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
@@ -30,7 +30,6 @@ type SubmissionRow = { user_id: string; gw: number; submitted_at: string | null 
 type ResultRowRaw = {
   gw: number;
   fixture_index: number;
-  // keep goals optional in case you ever store them later
   result?: "H" | "D" | "A" | null;
   home_goals?: number | null;
   away_goals?: number | null;
@@ -39,19 +38,26 @@ type ResultRowRaw = {
 type MltRow = {
   user_id: string;
   name: string;
-  mltPts: number;   // standings points (3/1/0 per GW)
-  ocp: number;      // sum of correct picks across season
-  unicorns: number; // unique correct picks across season
+  mltPts: number;
+  ocp: number;
+  unicorns: number;
   wins: number;
   draws: number;
-  form: ("W" | "D" | "L")[]; // oldest->newest; renderer will show last 5
+  form: ("W" | "D" | "L")[];
 };
 
+/* Chat */
+type ChatMsg = {
+  id: string;
+  league_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+};
 
 /* =========================
    Helpers
    ========================= */
-
 
 function initials(name: string) {
   const parts = (name || "?").trim().split(/\s+/);
@@ -60,13 +66,9 @@ function initials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-
 function rowToOutcome(r: ResultRowRaw): "H" | "D" | "A" | null {
   if (r.result === "H" || r.result === "D" || r.result === "A") return r.result;
-  if (
-    typeof r.home_goals === "number" &&
-    typeof r.away_goals === "number"
-  ) {
+  if (typeof r.home_goals === "number" && typeof r.away_goals === "number") {
     if (r.home_goals > r.away_goals) return "H";
     if (r.home_goals < r.away_goals) return "A";
     return "D";
@@ -77,7 +79,7 @@ function rowToOutcome(r: ResultRowRaw): "H" | "D" | "A" | null {
 /* Small chip used in GW Picks grid */
 function Chip({
   letter,
-  correct,        // null = result not decided yet
+  correct,
   unicorn,
 }: {
   letter: string;
@@ -108,6 +110,88 @@ function Chip({
 }
 
 /* =========================
+   ChatTab (external to avoid remount on typing)
+   ========================= */
+type ChatTabProps = {
+  chat: ChatMsg[];
+  userId?: string;
+  nameById: Map<string, string>;
+  isMember: boolean;
+  newMsg: string;
+  setNewMsg: (v: string) => void;
+  onSend: () => void;
+};
+
+function ChatTab({ chat, userId, nameById, isMember, newMsg, setNewMsg, onSend }: ChatTabProps) {
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll to bottom on mount and whenever chat grows
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat.length]);
+
+  return (
+    <div className="mt-4">
+      <div className="flex flex-col h-[60vh]">
+        <div ref={listRef} className="flex-1 overflow-y-auto rounded-xl border bg-white shadow-sm p-3">
+          {chat.map((m) => {
+            const mine = m.user_id === userId;
+            const name = nameById.get(m.user_id) ?? "Unknown";
+            const time = new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            return (
+              <div key={m.id} className={`mb-2 flex ${mine ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${mine ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-900"}`}>
+                  {!mine && <div className="font-semibold text-xs text-slate-600 mb-1">{name}</div>}
+                  <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                  <div className={`mt-1 text-[10px] ${mine ? "text-emerald-100" : "text-slate-500"}`}>{time}</div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={bottomRef} />
+        </div>
+
+        <div className="mt-3">
+          {isMember ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                onSend();
+              }}
+              className="flex gap-2"
+            >
+              <input
+                value={newMsg}
+                onChange={(e) => setNewMsg(e.target.value)}
+                placeholder="Message your league…"
+                maxLength={2000}
+                className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md disabled:opacity-50"
+                disabled={!newMsg.trim()}
+              >
+                Send
+              </button>
+            </form>
+          ) : (
+            <div className="rounded-md border border-amber-200 bg-amber-50 text-amber-800 p-3 text-sm">
+              Join this league to chat with other members.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
    Page
    ========================= */
 export default function LeaguePage() {
@@ -118,16 +202,16 @@ export default function LeaguePage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // tabs: Mini League Table / GW Picks / GW Results
-  const [tab, setTab] = useState<"mlt" | "gw" | "gwr">("gwr");
+  // tabs: Chat / Mini League Table / GW Picks / GW Results
+  const [tab, setTab] = useState<"chat" | "mlt" | "gw" | "gwr">("chat");
   const [showForm, setShowForm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [currentGw, setCurrentGw] = useState<number | null>(null);      // for GW Picks
-  const [latestResultsGw, setLatestResultsGw] = useState<number | null>(null); // for GW Results
-  const [selectedGw, setSelectedGw] = useState<number | null>(null);  // for GW switcher
-  const [availableGws, setAvailableGws] = useState<number[]>([]);     // available weeks with results
-  const [showGwDropdown, setShowGwDropdown] = useState(false);         // for custom dropdown
+  const [currentGw, setCurrentGw] = useState<number | null>(null);
+  const [latestResultsGw, setLatestResultsGw] = useState<number | null>(null);
+  const [selectedGw, setSelectedGw] = useState<number | null>(null);
+  const [availableGws, setAvailableGws] = useState<number[]>([]);
+  const [showGwDropdown, setShowGwDropdown] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
 
   const [showInvite, setShowInvite] = useState(false);
@@ -140,29 +224,35 @@ export default function LeaguePage() {
   const [ending, setEnding] = useState(false);
   const [firstMember, setFirstMember] = useState<Member | null>(null);
 
+  /* ----- Chat state ----- */
+  const [chat, setChat] = useState<ChatMsg[]>([]);
+  const [newMsg, setNewMsg] = useState("");
+  const isMember = useMemo(
+    () => !!user?.id && members.some((m) => m.id === user.id),
+    [user?.id, members]
+  );
+  const memberNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    members.forEach((x) => m.set(x.id, x.name));
+    return m;
+  }, [members]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (showGwDropdown && !target.closest('.gw-dropdown-container')) {
+      if (showGwDropdown && !target.closest(".gw-dropdown-container")) {
         setShowGwDropdown(false);
       }
     };
-    
-    if (showGwDropdown) {
-      document.addEventListener('click', handleClickOutside);
-    }
-    
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
+    if (showGwDropdown) document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, [showGwDropdown]);
 
-  /* ---------- load current GW (for picks) and latest results GW (for results tab) ---------- */
+  /* ---------- load current GW and latest results GW ---------- */
   useEffect(() => {
     let alive = true;
     (async () => {
-      // current GW
       const { data: meta } = await supabase
         .from("meta")
         .select("current_gw")
@@ -171,7 +261,6 @@ export default function LeaguePage() {
       if (!alive) return;
       setCurrentGw((meta as any)?.current_gw ?? null);
 
-      // latest GW that has results
       const { data: rs } = await supabase
         .from("gw_results")
         .select("gw")
@@ -180,7 +269,6 @@ export default function LeaguePage() {
       if (!alive) return;
       setLatestResultsGw((rs && rs.length ? (rs[0] as any).gw : null));
 
-      // fetch all available game weeks with results for switcher
       const { data: allGws } = await supabase
         .from("gw_results")
         .select("gw")
@@ -188,23 +276,21 @@ export default function LeaguePage() {
       if (!alive) return;
       const gwList = allGws ? [...new Set(allGws.map((r: any) => r.gw))].sort((a, b) => b - a) : [];
       setAvailableGws(gwList);
-      
-      // set initial selected week to latest results week
-      if (gwList.length > 0) {
-        setSelectedGw(gwList[0]);
-      }
+      if (gwList.length > 0) setSelectedGw(gwList[0]);
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  // data for GW Picks / GW Results
+  // data for GW tabs
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [picks, setPicks] = useState<PickRow[]>([]);
   const [subs, setSubs] = useState<SubmissionRow[]>([]);
   const [results, setResults] = useState<ResultRowRaw[]>([]);
 
-  // MLT (season standings) rows
+  // MLT rows
   const [mltRows, setMltRows] = useState<MltRow[]>([]);
   const [mltLoading, setMltLoading] = useState(false);
 
@@ -241,20 +327,16 @@ export default function LeaguePage() {
           name: r.users.name ?? "(no name)",
         })) ?? [];
 
-      // Keep original join order for admin determination, but sort alphabetically for display
       const memSorted = [...mem].sort((a, b) => a.name.localeCompare(b.name));
       setMembers(memSorted);
-      
-      // Store the original order for admin determination
-      const firstMember = mem[0]; // First member by join order
-      setFirstMember(firstMember);
-      
-      // Check if user arrived via share link and should see join confirmation
-      if (user?.id && !mem.some(m => m.id === user.id)) {
-        // User is not already a member, show join confirmation
+
+      const first = mem[0];
+      setFirstMember(first);
+
+      if (user?.id && !mem.some((m) => m.id === user.id)) {
         setShowJoinConfirm(true);
       }
-      
+
       setLoading(false);
     })();
 
@@ -263,10 +345,61 @@ export default function LeaguePage() {
     };
   }, [code]);
 
-  /* ---------- leave league function ---------- */
+  /* ---------- realtime chat: load + subscribe ---------- */
+  useEffect(() => {
+    if (!league?.id) return;
+    let alive = true;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("league_messages")
+        .select("id, league_id, user_id, content, created_at")
+        .eq("league_id", league.id)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (!alive) return;
+      if (!error) setChat((data as ChatMsg[]) ?? []);
+    })();
+
+    const channel = supabase
+      .channel(`league-messages:${league.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "league_messages",
+          filter: `league_id=eq.${league.id}`,
+        },
+        (payload) => {
+          setChat((prev) => [...prev, payload.new as ChatMsg]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      alive = false;
+      supabase.removeChannel(channel);
+    };
+  }, [league?.id]);
+
+  /* ---------- mark-as-read when viewing Chat ---------- */
+  useEffect(() => {
+    if (tab !== "chat" || !league?.id || !user?.id) return;
+    const mark = async () => {
+      await supabase
+        .from("league_message_reads")
+        .upsert(
+          { league_id: league.id, user_id: user.id, last_read_at: new Date().toISOString() },
+          { onConflict: "league_id,user_id" }
+        );
+    };
+    mark();
+  }, [tab, league?.id, user?.id, chat.length]);
+
+  /* ---------- leave/join/admin ---------- */
   async function leaveLeague() {
     if (!league || !user?.id) return;
-    
     setLeaving(true);
     try {
       const { error } = await supabase
@@ -274,10 +407,7 @@ export default function LeaguePage() {
         .delete()
         .eq("league_id", league.id)
         .eq("user_id", user.id);
-
       if (error) throw error;
-
-      // Redirect to leagues page
       window.location.href = "/leagues";
     } catch (error) {
       console.error("Error leaving league:", error);
@@ -288,27 +418,19 @@ export default function LeaguePage() {
     }
   }
 
-  /* ---------- join league function ---------- */
   async function joinLeague() {
     if (!league || !user?.id) return;
-    
     setJoining(true);
     try {
-      // Check if league is full
       if (members.length >= MAX_MEMBERS) {
         alert("League is full (max 8 members).");
         setShowJoinConfirm(false);
         return;
       }
-
-      // Join the league
       const { error } = await supabase
         .from("league_members")
         .insert({ league_id: league.id, user_id: user.id });
-
       if (error) throw error;
-
-      // Refresh the page to show updated membership
       window.location.reload();
     } catch (e: any) {
       alert(e?.message ?? "Failed to join league.");
@@ -317,25 +439,20 @@ export default function LeaguePage() {
     }
   }
 
-  /* ---------- admin functions ---------- */
-  // For now, if no created_by field exists, consider the first member as admin
-  // In the future, we'll add created_by field to the database
   const isAdmin = useMemo(() => {
     return league?.created_by === user?.id || (firstMember && firstMember.id === user?.id && !league?.created_by);
   }, [league?.created_by, user?.id, firstMember]);
-  
-  const adminName = useMemo(() => {
-    return league?.created_by 
-      ? members.find(m => m.id === league.created_by)?.name || "Unknown"
-      : firstMember ? firstMember.name : "Unknown";
-  }, [league?.created_by, members, firstMember]);
 
-  // Admin logic working correctly
-  console.log("Admin values:", { isAdmin, adminName });
+  const adminName = useMemo(() => {
+    return league?.created_by
+      ? members.find((m) => m.id === league.created_by)?.name || "Unknown"
+      : firstMember
+      ? firstMember.name
+      : "Unknown";
+  }, [league?.created_by, members, firstMember]);
 
   async function removeMember() {
     if (!memberToRemove || !league || !user?.id) return;
-    
     setRemoving(true);
     try {
       const { error } = await supabase
@@ -343,10 +460,7 @@ export default function LeaguePage() {
         .delete()
         .eq("league_id", league.id)
         .eq("user_id", memberToRemove.id);
-
       if (error) throw error;
-
-      // Refresh the page to show updated membership
       window.location.reload();
     } catch (e: any) {
       alert(e?.message ?? "Failed to remove member.");
@@ -359,26 +473,20 @@ export default function LeaguePage() {
 
   async function endLeague() {
     if (!league || !user?.id) return;
-    
     setEnding(true);
     try {
-      // Delete all league members first
       const { error: membersError } = await supabase
         .from("league_members")
         .delete()
         .eq("league_id", league.id);
-
       if (membersError) throw membersError;
 
-      // Delete the league itself
       const { error: leagueError } = await supabase
         .from("leagues")
         .delete()
         .eq("id", league.id);
-
       if (leagueError) throw leagueError;
 
-      // Redirect to leagues page
       window.location.href = "/leagues";
     } catch (e: any) {
       alert(e?.message ?? "Failed to end league.");
@@ -388,28 +496,44 @@ export default function LeaguePage() {
     }
   }
 
-  /* ---------- share league function ---------- */
   function shareLeague() {
     if (!league) return;
-    
     const shareText = `Join my mini league "${league.name}" on TotL!`;
     const shareUrl = `${window.location.origin}/league/${league.code}`;
-    
-    // Try to use Web Share API first (mobile)
     if (navigator.share) {
-      navigator.share({
-        title: `Join ${league.name}`,
-        text: shareText,
-        url: shareUrl
-      }).catch(console.error);
+      navigator
+        .share({
+          title: `Join ${league.name}`,
+          text: shareText,
+          url: shareUrl,
+        })
+        .catch(console.error);
     } else {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`).then(() => {
-        alert("League link copied to clipboard!");
-      }).catch(() => {
-        // Final fallback: show the code in a prompt
-        prompt("Share this league code:", league.code);
-      });
+      navigator.clipboard
+        .writeText(`${shareText}\n\n${shareUrl}`)
+        .then(() => {
+          alert("League link copied to clipboard!");
+        })
+        .catch(() => {
+          prompt("Share this league code:", league.code);
+        });
+    }
+  }
+
+  /* ---------- send chat ---------- */
+  async function sendChat() {
+    if (!league || !user?.id) return;
+    const text = newMsg.trim();
+    if (!text) return;
+    setNewMsg("");
+    const { error } = await supabase.from("league_messages").insert({
+      league_id: league.id,
+      user_id: user.id,
+      content: text,
+    });
+    if (error) {
+      console.error(error);
+      alert("Failed to send message.");
     }
   }
 
@@ -418,7 +542,7 @@ export default function LeaguePage() {
     let alive = true;
 
     (async () => {
-      const gwForData = tab === "gwr" ? selectedGw : (tab === "gw" ? currentGw : currentGw);
+      const gwForData = tab === "gwr" ? selectedGw : tab === "gw" ? currentGw : currentGw;
       if (!gwForData) {
         setFixtures([]);
         setPicks([]);
@@ -426,7 +550,6 @@ export default function LeaguePage() {
         setResults([]);
         return;
       }
-      // Fixtures for GW (names/codes for display)
       const { data: fx } = await supabase
         .from("fixtures")
         .select(
@@ -445,31 +568,23 @@ export default function LeaguePage() {
         return;
       }
 
-      // Picks
       const { data: pk } = await supabase
         .from("picks")
         .select("user_id,gw,fixture_index,pick")
         .eq("gw", gwForData)
         .in("user_id", memberIds);
-
       if (!alive) return;
       setPicks((pk as PickRow[]) ?? []);
 
-      // Submissions
       const { data: sb } = await supabase
         .from("gw_submissions")
         .select("user_id,gw,submitted_at")
         .eq("gw", gwForData)
         .in("user_id", memberIds);
-
       if (!alive) return;
       setSubs((sb as SubmissionRow[]) ?? []);
 
-      // Results (from gw_results; we’ll filter by gw in components)
-      const { data: rs } = await supabase
-        .from("gw_results")
-        .select("gw,fixture_index,result");
-
+      const { data: rs } = await supabase.from("gw_results").select("gw,fixture_index,result");
       if (!alive) return;
       setResults((rs as ResultRowRaw[]) ?? []);
     })();
@@ -495,13 +610,9 @@ export default function LeaguePage() {
       }
       setMltLoading(true);
 
-      // all results we have (gw + fixture_index based)
-      const { data: rs } = await supabase
-        .from("gw_results")
-        .select("gw,fixture_index,result");
+      const { data: rs } = await supabase.from("gw_results").select("gw,fixture_index,result");
       const resultList = (rs as ResultRowRaw[]) ?? [];
 
-      // outcome per gw:idx key = `${gw}:${fixture_index}`
       const outcomeByGwIdx = new Map<string, "H" | "D" | "A">();
       resultList.forEach((r) => {
         const out = rowToOutcome(r);
@@ -510,7 +621,6 @@ export default function LeaguePage() {
       });
 
       if (outcomeByGwIdx.size === 0) {
-        // No results yet ⇒ zero rows
         setMltRows(
           members.map((m) => ({
             user_id: m.id,
@@ -527,11 +637,10 @@ export default function LeaguePage() {
         return;
       }
 
-      const gwsWithResults = [...new Set(
-        Array.from(outcomeByGwIdx.keys()).map((k) => parseInt(k.split(":")[0], 10))
-      )].sort((a, b) => a - b);
+      const gwsWithResults = [...new Set(Array.from(outcomeByGwIdx.keys()).map((k) => parseInt(k.split(":")[0], 10)))].sort(
+        (a, b) => a - b
+      );
 
-      // all picks for those GWs
       const { data: pk } = await supabase
         .from("picks")
         .select("user_id,gw,fixture_index,pick")
@@ -539,7 +648,6 @@ export default function LeaguePage() {
         .in("gw", gwsWithResults);
       const picksAll = (pk as PickRow[]) ?? [];
 
-      // perGW map of user score & unicorns
       type GwScore = { user_id: string; score: number; unicorns: number };
       const perGw = new Map<number, Map<string, GwScore>>();
       gwsWithResults.forEach((g) => {
@@ -548,9 +656,7 @@ export default function LeaguePage() {
         perGw.set(g, map);
       });
 
-      // fill scores and unicorns
       gwsWithResults.forEach((g) => {
-        // fixture indexes that have outcomes for gw g
         const idxInGw = Array.from(outcomeByGwIdx.entries())
           .filter(([k]) => parseInt(k.split(":")[0], 10) === g)
           .map(([k, v]) => ({ idx: parseInt(k.split(":")[1], 10), out: v }));
@@ -559,7 +665,6 @@ export default function LeaguePage() {
           const thesePicks = picksAll.filter((p) => p.gw === g && p.fixture_index === idx);
           const correctUsers = thesePicks.filter((p) => p.pick === out).map((p) => p.user_id);
 
-          // increment one point for each correct user
           const map = perGw.get(g)!;
           thesePicks.forEach((p) => {
             if (p.pick === out) {
@@ -568,7 +673,6 @@ export default function LeaguePage() {
             }
           });
 
-          // unicorn (only for leagues with 3+ players)
           if (correctUsers.length === 1 && members.length >= 3) {
             const uid = correctUsers[0];
             const row = map.get(uid)!;
@@ -577,7 +681,6 @@ export default function LeaguePage() {
         });
       });
 
-      // accumulate season stats
       const mltPts = new Map<string, number>();
       const ocp = new Map<string, number>();
       const unis = new Map<string, number>();
@@ -595,34 +698,28 @@ export default function LeaguePage() {
 
       gwsWithResults.forEach((g) => {
         const rows = Array.from(perGw.get(g)!.values());
-        // add ocp/unicorns season totals
         rows.forEach((r) => {
           ocp.set(r.user_id, (ocp.get(r.user_id) ?? 0) + r.score);
           unis.set(r.user_id, (unis.get(r.user_id) ?? 0) + r.unicorns);
         });
 
-        // rank this GW by score, then unicorns
-        rows.sort((a, b) => (b.score - a.score) || (b.unicorns - a.unicorns));
+        rows.sort((a, b) => b.score - a.score || b.unicorns - a.unicorns);
         if (!rows.length) return;
 
         const top = rows[0];
         const coTop = rows.filter((r) => r.score === top.score && r.unicorns === top.unicorns);
 
         if (coTop.length === 1) {
-          // win
           mltPts.set(top.user_id, (mltPts.get(top.user_id) ?? 0) + 3);
           wins.set(top.user_id, (wins.get(top.user_id) ?? 0) + 1);
           form.get(top.user_id)!.push("W");
-          // others lose
           rows.slice(1).forEach((r) => form.get(r.user_id)!.push("L"));
         } else {
-          // draw among coTop
           coTop.forEach((r) => {
             mltPts.set(r.user_id, (mltPts.get(r.user_id) ?? 0) + 1);
             draws.set(r.user_id, (draws.get(r.user_id) ?? 0) + 1);
             form.get(r.user_id)!.push("D");
           });
-          // the rest lose
           rows
             .filter((r) => !coTop.find((t) => t.user_id === r.user_id))
             .forEach((r) => form.get(r.user_id)!.push("L"));
@@ -640,13 +737,7 @@ export default function LeaguePage() {
         form: form.get(m.id) ?? [],
       }));
 
-      rows.sort(
-        (a, b) =>
-          (b.mltPts - a.mltPts) ||
-          (b.unicorns - a.unicorns) ||
-          (b.ocp - a.ocp) ||
-          a.name.localeCompare(b.name)
-      );
+      rows.sort((a, b) => b.mltPts - a.mltPts || b.unicorns - a.unicorns || b.ocp - a.ocp || a.name.localeCompare(b.name));
 
       if (!alive) return;
       setMltRows(rows);
@@ -666,26 +757,24 @@ export default function LeaguePage() {
     const renderForm = (formArr: ("W" | "D" | "L")[]) => {
       const last5 = formArr.slice(-5);
       const pad = 5 - last5.length;
-      
+
       return (
         <div className="flex items-center gap-2">
-          {/* Show dots for missing games */}
           {Array.from({ length: pad }).map((_, i) => (
             <div key={`dot-${i}`} className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
           ))}
-          {/* Show form indicators */}
           {last5.map((result, i) => (
             <div
               key={i}
               className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                result === "W" 
-                  ? "bg-green-100 text-green-700" 
-                  : result === "D" 
-                  ? "bg-yellow-100 text-yellow-700" 
+                result === "W"
+                  ? "bg-green-100 text-green-700"
+                  : result === "D"
+                  ? "bg-yellow-100 text-yellow-700"
                   : "bg-red-100 text-red-700"
               }`}
             >
-              {result === "W" ? "W" : result === "D" ? "D" : "L"}
+              {result}
             </div>
           ))}
         </div>
@@ -705,7 +794,6 @@ export default function LeaguePage() {
           form: [] as ("W" | "D" | "L")[],
         }));
 
-    // Show single-player message
     if (members.length === 1) {
       return (
         <div className="text-center p-8 bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -724,11 +812,9 @@ export default function LeaguePage() {
 
     return (
       <div>
-        {/* Table container */}
         <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
           <div className="overflow-x-auto">
             <div className="min-w-full">
-              {/* Header */}
               <div className="grid grid-cols-[48px_80px_200px] gap-0 bg-slate-50 text-xs font-semibold text-slate-600">
                 <div className="px-2 py-3 text-left">#</div>
                 <div className="px-2 py-3 text-left">PLAYER</div>
@@ -746,8 +832,7 @@ export default function LeaguePage() {
                   </div>
                 )}
               </div>
-              
-              {/* Rows */}
+
               {rows.map((r, i) => (
                 <div key={r.user_id} className="grid grid-cols-[48px_80px_200px] gap-0 border-t border-slate-200 text-sm">
                   <div className="px-2 py-3 font-semibold text-slate-600">{i + 1}</div>
@@ -769,24 +854,19 @@ export default function LeaguePage() {
               ))}
             </div>
           </div>
-          
+
           {mltLoading && <div className="p-3 text-slate-500 text-xs sm:text-sm">Calculating…</div>}
           {!mltLoading && !mltRows.length && (
-            <div className="p-3 text-slate-500 text-xs sm:text-sm">
-              No gameweeks completed yet — this will populate after the first results are saved.
-            </div>
+            <div className="p-3 text-slate-500 text-xs sm:text-sm">No gameweeks completed yet — this will populate after the first results are saved.</div>
           )}
         </div>
-        
-        {/* Toggle switch outside the table */}
+
         <div className="mt-3 flex justify-end">
           <div className="inline-flex rounded-lg bg-slate-100 p-1 shadow-sm">
             <button
               onClick={() => setShowForm(false)}
               className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-                !showForm
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                !showForm ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
               }`}
             >
               Points
@@ -794,9 +874,7 @@ export default function LeaguePage() {
             <button
               onClick={() => setShowForm(true)}
               className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-                showForm
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                showForm ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
               }`}
             >
               Form
@@ -810,14 +888,9 @@ export default function LeaguePage() {
   function GwPicksTab() {
     const picksGw = currentGw;
     if (!picksGw) {
-      return (
-        <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
-          No current game week available.
-        </div>
-      );
+      return <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">No current game week available.</div>;
     }
-    // Build outcome map for current GW directly from gw_results
-    const outcomes = new Map<number, "H" | "D" | "A">(); // fixture_index -> outcome
+    const outcomes = new Map<number, "H" | "D" | "A">();
     results.forEach((r) => {
       if (r.gw !== picksGw) return;
       const out = rowToOutcome(r);
@@ -825,7 +898,6 @@ export default function LeaguePage() {
       outcomes.set(r.fixture_index, out);
     });
 
-    // Group fixtures by kickoff date, ordered by date
     const sections = useMemo(() => {
       const fmt = (iso?: string | null) => {
         if (!iso) return "Fixtures";
@@ -848,7 +920,6 @@ export default function LeaguePage() {
       return out;
     }, [fixtures, picksGw]);
 
-    // Index picks by fixture_index for this GW
     const picksByFixture = new Map<number, PickRow[]>();
     picks.forEach((p) => {
       if (p.gw !== picksGw) return;
@@ -857,11 +928,9 @@ export default function LeaguePage() {
       picksByFixture.set(p.fixture_index, arr);
     });
 
-    const allSubmitted =
-      members.length > 0 && members.every((m) => submittedMap.get(`${m.id}:${picksGw}`));
+    const allSubmitted = members.length > 0 && members.every((m) => submittedMap.get(`${m.id}:${picksGw}`));
     const resultsPublished = latestResultsGw !== null && latestResultsGw >= picksGw;
     const remaining = members.filter((m) => !submittedMap.get(`${m.id}:${picksGw}`)).length;
-
 
     return (
       <div className="mt-4">
@@ -880,16 +949,6 @@ export default function LeaguePage() {
           )}
         </div>
 
-        {/* Fun line for waiting state */}
-        {!allSubmitted && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-blue-800 font-medium text-sm">
-              👀 Watch this space! You'll see everyone's picks once everybody has submitted
-            </div>
-          </div>
-        )}
-
-        {/* Sections (only show once all members have submitted) */}
         {!allSubmitted ? (
           <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-700">
             <div className="mb-3">
@@ -949,11 +1008,9 @@ export default function LeaguePage() {
                     <tbody>
                       {sec.items.map((f) => {
                         try {
-                          // Get team names safely
                           const homeName = f.home_name || f.home_team || "Home";
                           const awayName = f.away_name || f.away_team || "Away";
-                          
-                          // Format kickoff time
+
                           const timeOf = (iso?: string | null) => {
                             if (!iso) return "";
                             const d = new Date(iso);
@@ -961,12 +1018,10 @@ export default function LeaguePage() {
                             return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                           };
                           const timeStr = timeOf(f.kickoff_time);
-                          
-                          // Get picks for this fixture
+
                           const fxIdx = f.fixture_index;
                           const these = picksByFixture.get(fxIdx) ?? [];
-                          
-                          // Create chips for each pick type
+
                           const toChips = (want: "H" | "D" | "A") =>
                             these
                               .filter((p) => p.pick === want)
@@ -975,16 +1030,9 @@ export default function LeaguePage() {
                                 const letter = initials(m?.name ?? "?");
                                 const actualResult = outcomes.get(fxIdx);
                                 const isCorrect = actualResult === want;
-                                return (
-                                  <Chip
-                                    key={p.user_id}
-                                    letter={letter}
-                                    correct={actualResult ? isCorrect : null} // null if no result yet, boolean if result exists
-                                    unicorn={false}
-                                  />
-                                );
+                                return <Chip key={p.user_id} letter={letter} correct={actualResult ? isCorrect : null} unicorn={false} />;
                               });
-                          
+
                           return (
                             <tr key={`${f.gw}-${f.fixture_index}`} className="border-b border-slate-200">
                               <td className="px-4 py-3 text-slate-900 font-bold border-r border-slate-200">
@@ -994,29 +1042,21 @@ export default function LeaguePage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3 bg-emerald-50/30 border-r border-slate-200">
-                                <div className="flex flex-wrap gap-1 justify-center">
-                                  {toChips("H")}
-                                </div>
+                                <div className="flex flex-wrap gap-1 justify-center">{toChips("H")}</div>
                               </td>
                               <td className="px-4 py-3 bg-slate-50/50 border-r border-slate-200">
-                                <div className="flex flex-wrap gap-1 justify-center">
-                                  {toChips("D")}
-                                </div>
+                                <div className="flex flex-wrap gap-1 justify-center">{toChips("D")}</div>
                               </td>
                               <td className="px-4 py-3 bg-blue-50/30">
-                                <div className="flex flex-wrap gap-1 justify-center">
-                                  {toChips("A")}
-                                </div>
+                                <div className="flex flex-wrap gap-1 justify-center">{toChips("A")}</div>
                               </td>
                             </tr>
                           );
                         } catch (error) {
-                          console.error('Error rendering fixture:', error, f);
+                          console.error("Error rendering fixture:", error, f);
                           return (
                             <tr key={`${f.gw}-${f.fixture_index}`}>
-                              <td className="px-4 py-3 text-red-500" colSpan={4}>
-                                Error loading fixture: {f.fixture_index}
-                              </td>
+                              <td className="px-4 py-3 text-red-500" colSpan={4}>Error loading fixture: {f.fixture_index}</td>
                             </tr>
                           );
                         }
@@ -1033,11 +1073,7 @@ export default function LeaguePage() {
                 </div>
               </div>
             ))}
-            {!sections.length && (
-              <div className="rounded-2xl border bg-white shadow-sm p-4 text-slate-500">
-                No fixtures for GW {picksGw}.
-              </div>
-            )}
+            {!sections.length && <div className="rounded-2xl border bg-white shadow-sm p-4 text-slate-500">No fixtures for GW {picksGw}.</div>}
           </div>
         )}
       </div>
@@ -1046,15 +1082,9 @@ export default function LeaguePage() {
 
   function GwResultsTab() {
     const resGw = selectedGw;
-    if (!resGw) {
-      return (
-        <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
-          No game week selected.
-        </div>
-      );
-    }
-    // Build outcome map for current GW directly from gw_results
-    const outcomes = new Map<number, "H" | "D" | "A">(); // fixture_index -> outcome
+    if (!resGw) return <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">No game week selected.</div>;
+
+    const outcomes = new Map<number, "H" | "D" | "A">();
     results.forEach((r) => {
       if (r.gw !== resGw) return;
       const out = rowToOutcome(r);
@@ -1062,14 +1092,8 @@ export default function LeaguePage() {
       outcomes.set(r.fixture_index, out);
     });
 
-    // Calculate score + unicorns for this GW
     type Row = { user_id: string; name: string; score: number; unicorns: number };
-    const rows: Row[] = members.map((m) => ({
-      user_id: m.id,
-      name: m.name,
-      score: 0,
-      unicorns: 0,
-    }));
+    const rows: Row[] = members.map((m) => ({ user_id: m.id, name: m.name, score: 0, unicorns: 0 }));
 
     const picksByFixture = new Map<number, PickRow[]>();
     picks.forEach((p) => {
@@ -1083,37 +1107,30 @@ export default function LeaguePage() {
       const these = picksByFixture.get(idx) ?? [];
       const correctIds = these.filter((p) => p.pick === out).map((p) => p.user_id);
 
-      // +1 per correct
       correctIds.forEach((uid) => {
         const r = rows.find((x) => x.user_id === uid)!;
         r.score += 1;
       });
 
-      // unicorn (only for leagues with 3+ players)
       if (correctIds.length === 1 && members.length >= 3) {
         const r = rows.find((x) => x.user_id === correctIds[0])!;
         r.unicorns += 1;
       }
     });
 
-    rows.sort((a, b) => (b.score - a.score) || (b.unicorns - a.unicorns) || a.name.localeCompare(b.name));
+    rows.sort((a, b) => b.score - a.score || b.unicorns - a.unicorns || a.name.localeCompare(b.name));
 
     return (
       <div className="mt-4">
         <div className="text-slate-900 font-bold text-xl mb-4">Game Week {resGw}</div>
-        
-        {/* Winner Section */}
+
         {rows.length > 0 && (
           <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 shadow-2xl shadow-slate-600/50 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent before:animate-[shimmer_2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/30 after:to-transparent after:animate-[shimmer_2.5s_ease-in-out_infinite_0.6s]">
             <div className="text-center relative z-10">
               {rows[0].score === rows[1]?.score && rows[0].unicorns === rows[1]?.unicorns ? (
-                <div className="text-lg font-bold text-white">
-                  🤝 It's a Draw!
-                </div>
+                <div className="text-lg font-bold text-white">🤝 It's a Draw!</div>
               ) : (
-                <div className="text-lg font-bold text-white">
-                  🏆 {rows[0].name} Wins!
-                </div>
+                <div className="text-lg font-bold text-white">🏆 {rows[0].name} Wins!</div>
               )}
             </div>
           </div>
@@ -1172,29 +1189,24 @@ export default function LeaguePage() {
     );
   }
 
-
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-6xl mx-auto px-4 pt-6 pb-16">
         {/* Header with back link */}
         <div className="mb-6">
-          <Link
-            to="/leagues"
-            className="inline-flex items-center text-slate-500 hover:text-slate-700 text-sm mb-3"
-          >
+          <Link to="/leagues" className="inline-flex items-center text-slate-500 hover:text-slate-700 text-sm mb-3">
             ← Back to Mini Leagues
           </Link>
-          
+
           <div className="text-center">
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">
               {league.name}
             </h1>
-            
+
             <div className="mt-0 mb-6 text-base text-slate-500">
               Code: <span className="font-mono font-semibold">{league.code}</span> · {members.length}/{MAX_MEMBERS} member{members.length === 1 ? "" : "s"}
             </div>
-            
-            {/* Admin indicator */}
+
             {isAdmin && (
               <div className="mb-4 text-sm text-slate-600 flex justify-center items-center">
                 Admin: <span className="font-semibold text-slate-800">{adminName}</span>
@@ -1206,35 +1218,36 @@ export default function LeaguePage() {
                 </button>
               </div>
             )}
-            
-            {/* Admin Menu */}
+
             {isAdmin && showAdminMenu && (
               <div className="mb-4 bg-white border border-slate-200 rounded-lg shadow-lg p-4 w-full max-w-4xl mx-auto">
                 <h3 className="font-semibold text-slate-900 mb-3">League Management</h3>
-                
+
                 <div className="space-y-2">
                   <div className="text-sm text-slate-600 mb-3">Remove Members:</div>
-                  {members.filter(m => m.id !== user?.id).map((member) => (
-                    <div key={member.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-md">
-                      <span className="text-sm font-medium text-slate-800">{member.name}</span>
-                      <button
-                        onClick={() => {
-                          setMemberToRemove(member);
-                          setShowRemoveConfirm(true);
-                          setShowAdminMenu(false);
-                        }}
-                        className="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                  
-                  {members.filter(m => m.id !== user?.id).length === 0 && (
+                  {members
+                    .filter((m) => m.id !== user?.id)
+                    .map((member) => (
+                      <div key={member.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-md">
+                        <span className="text-sm font-medium text-slate-800">{member.name}</span>
+                        <button
+                          onClick={() => {
+                            setMemberToRemove(member);
+                            setShowRemoveConfirm(true);
+                            setShowAdminMenu(false);
+                          }}
+                          className="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+
+                  {members.filter((m) => m.id !== user?.id).length === 0 && (
                     <div className="text-sm text-slate-500 italic py-2">No other members to remove</div>
                   )}
                 </div>
-                
+
                 <div className="mt-4 pt-3 border-t border-slate-200">
                   <button
                     onClick={() => {
@@ -1248,7 +1261,7 @@ export default function LeaguePage() {
                 </div>
               </div>
             )}
-            
+
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => setShowInvite(true)}
@@ -1263,7 +1276,12 @@ export default function LeaguePage() {
                 title="Share league code"
               >
                 <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                  />
                 </svg>
                 Share
               </button>
@@ -1285,12 +1303,19 @@ export default function LeaguePage() {
         <div className="mt-6">
           <div className="inline-flex rounded-lg bg-slate-100 p-1 shadow-sm">
             <button
+              onClick={() => setTab("chat")}
+              className={
+                "px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
+                (tab === "chat" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+              }
+            >
+              Chat
+            </button>
+            <button
               onClick={() => setTab("gwr")}
               className={
                 "px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
-                (tab === "gwr"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+                (tab === "gwr" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
               {selectedGw ? `GW ${selectedGw} Results` : "GW Results"}
@@ -1299,9 +1324,7 @@ export default function LeaguePage() {
               onClick={() => setTab("gw")}
               className={
                 "px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
-                (tab === "gw"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+                (tab === "gw" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
               {currentGw ? `GW ${currentGw} Picks` : "GW Picks"}
@@ -1310,9 +1333,7 @@ export default function LeaguePage() {
               onClick={() => setTab("mlt")}
               className={
                 "px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
-                (tab === "mlt"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+                (tab === "mlt" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
               Table
@@ -1320,14 +1341,24 @@ export default function LeaguePage() {
           </div>
         </div>
 
-
         <div className="mt-6">
+          {tab === "chat" && (
+            <ChatTab
+              chat={chat}
+              userId={user?.id}
+              nameById={memberNameById}
+              isMember={isMember}
+              newMsg={newMsg}
+              setNewMsg={setNewMsg}
+              onSend={sendChat}
+            />
+          )}
           {tab === "mlt" && <MltTab />}
           {tab === "gw" && <GwPicksTab />}
           {tab === "gwr" && <GwResultsTab />}
         </div>
 
-        {/* Game Week Switcher - only show for GW Results tab, positioned below content */}
+        {/* Game Week Switcher for Results */}
         {tab === "gwr" && availableGws.length > 0 && (
           <div className="mt-6 flex items-center justify-center">
             <div className="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-4 py-2 shadow-sm">
@@ -1345,7 +1376,7 @@ export default function LeaguePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                
+
                 {showGwDropdown && (
                   <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 min-w-[140px]">
                     {availableGws.map((gw) => (
@@ -1357,7 +1388,7 @@ export default function LeaguePage() {
                           setShowGwDropdown(false);
                         }}
                         className={`w-full text-left px-4 py-3 text-base font-medium hover:bg-slate-50 transition-colors ${
-                          selectedGw === gw ? 'bg-blue-50 text-blue-700' : 'text-slate-900'
+                          selectedGw === gw ? "bg-blue-50 text-blue-700" : "text-slate-900"
                         }`}
                       >
                         GW {gw}
@@ -1376,32 +1407,24 @@ export default function LeaguePage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-4">
             <h3 className="text-lg font-semibold text-slate-900 mb-2">Invite players</h3>
-            <p className="text-slate-600 text-sm">
-              Share this code (up to {MAX_MEMBERS} members):
-            </p>
+            <p className="text-slate-600 text-sm">Share this code (up to {MAX_MEMBERS} members):</p>
             <div className="mt-3 flex items-center gap-2">
               <code className="font-mono text-lg font-bold">{league.code}</code>
               <button
-                onClick={() => { navigator.clipboard.writeText(league.code); }}
+                onClick={() => {
+                  navigator.clipboard.writeText(league.code);
+                }}
                 className="px-3 py-1.5 border rounded-md text-sm hover:bg-slate-50"
               >
                 Copy
               </button>
-              <button
-                onClick={shareLeague}
-                className="px-3 py-1.5 border rounded-md text-sm hover:bg-slate-50"
-              >
+              <button onClick={shareLeague} className="px-3 py-1.5 border rounded-md text-sm hover:bg-slate-50">
                 Share
               </button>
             </div>
-            <div className="mt-3 text-xs text-slate-500">
-              {members.length}/{MAX_MEMBERS} members
-            </div>
+            <div className="mt-3 text-xs text-slate-500">{members.length}/{MAX_MEMBERS} members</div>
             <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowInvite(false)}
-                className="px-4 py-2 border border-slate-300 rounded-md hover:bg-slate-50"
-              >
+              <button onClick={() => setShowInvite(false)} className="px-4 py-2 border border-slate-300 rounded-md hover:bg-slate-50">
                 Close
               </button>
             </div>
@@ -1409,13 +1432,11 @@ export default function LeaguePage() {
         </div>
       )}
 
-      {/* Leave League Confirmation Modal */}
+      {/* Leave League Confirmation */}
       {showLeaveConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
-              Leave League
-            </h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Leave League</h3>
             <p className="text-slate-600 mb-6">
               Are you sure you want to leave "{league?.name}"? You'll need the league code to rejoin later.
             </p>
@@ -1439,13 +1460,11 @@ export default function LeaguePage() {
         </div>
       )}
 
-      {/* Join Confirmation Popup */}
+      {/* Join Confirmation */}
       {showJoinConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
-              Join Mini League
-            </h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Join Mini League</h3>
             <p className="text-slate-600 mb-6">
               You are about to join <strong>"{league?.name}"</strong>. Are you sure?
             </p>
@@ -1469,13 +1488,11 @@ export default function LeaguePage() {
         </div>
       )}
 
-      {/* Remove Member Confirmation Popup */}
+      {/* Remove Member Confirmation */}
       {showRemoveConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
-              Remove Member
-            </h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Remove Member</h3>
             <p className="text-slate-600 mb-6">
               Are you sure you want to remove <strong>"{memberToRemove?.name}"</strong> from the league? They will need the league code to rejoin.
             </p>
@@ -1499,13 +1516,11 @@ export default function LeaguePage() {
         </div>
       )}
 
-      {/* End League Confirmation Popup */}
+      {/* End League Confirmation */}
       {showEndLeagueConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-red-600 mb-2">
-              ⚠️ End League
-            </h3>
+            <h3 className="text-lg font-semibold text-red-600 mb-2">⚠️ End League</h3>
             <p className="text-slate-600 mb-4">
               Are you absolutely sure you want to <strong>permanently end</strong> the league <strong>"{league?.name}"</strong>?
             </p>
