@@ -13,6 +13,7 @@ import GlobalPage from "./pages/Global";
 import CreateLeaguePage from "./pages/CreateLeague";
 import HowToPlayPage from "./pages/HowToPlay";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import PredictionsBanner from "./components/PredictionsBanner";
 import SignIn from "./pages/SignIn";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
