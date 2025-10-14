@@ -39,7 +39,7 @@ function parseKickoffToISO(kickoffText: string): string | null {
     if (!month) return null;
     const year = new Date().getFullYear();
     const day = dayStr.padStart(2, "0");
-    return `${year}-${month}-${day}T${hh}:${mm}:00Z`;
+    return `${year}-${month}-${day}T${hh}:${mm}:00`;
   }
   
   // Try format without time: "Fri 15 Aug" - default to 15:00
@@ -55,7 +55,7 @@ function parseKickoffToISO(kickoffText: string): string | null {
     if (!month) return null;
     const year = new Date().getFullYear();
     const day = dayStr.padStart(2, "0");
-    return `${year}-${month}-${day}T15:00:00Z`; // Default to 15:00
+    return `${year}-${month}-${day}T15:00:00`; // Default to 15:00
   }
   
   return null;
@@ -210,9 +210,6 @@ export default function AdminPage() {
         setFixtures(data as Fixture[]);
       }
       setOk("Fixtures saved!");
-      
-      // Dispatch event to notify PredictionsBanner that fixtures have been published
-      window.dispatchEvent(new CustomEvent('fixturesPublished'));
     } catch (e: any) {
       setError(e.message ?? "Failed to save fixtures.");
     } finally {
@@ -240,6 +237,9 @@ export default function AdminPage() {
 
       setOk(`Gameweek ${gw} activated successfully!`);
       setActiveGw(gw);
+      
+      // Dispatch event to notify PredictionsBanner that fixtures have been published
+      window.dispatchEvent(new CustomEvent('fixturesPublished'));
     } catch (e: any) {
       setError(e.message ?? "Failed to activate gameweek.");
     } finally {
