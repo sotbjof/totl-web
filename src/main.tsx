@@ -12,8 +12,6 @@ import HomePage from "./pages/Home";
 import GlobalPage from "./pages/Global";
 import CreateLeaguePage from "./pages/CreateLeague";
 import HowToPlayPage from "./pages/HowToPlay";
-import { getCurrentUser, onDevUserChange, setDevUser } from "./devAuth";
-import PredictionsBanner from "./components/PredictionsBanner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import SignIn from "./pages/SignIn";
 
@@ -25,22 +23,17 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function AppShell() {
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const [me, setMe] = React.useState(() => getCurrentUser());
-  React.useEffect(() => onDevUserChange(setMe), []);
-  const shortId = (id: string) => `${id.slice(0, 4)}…${id.slice(-4)}`;
   
   return (
     <BrowserRouter>
-      <AppContent menuOpen={menuOpen} setMenuOpen={setMenuOpen} me={me} shortId={shortId} />
+      <AppContent menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
     </BrowserRouter>
   );
 }
 
-function AppContent({ menuOpen, setMenuOpen, me, shortId }: { 
+function AppContent({ menuOpen, setMenuOpen }: { 
   menuOpen: boolean; 
   setMenuOpen: (value: boolean | ((prev: boolean) => boolean)) => void; 
-  me: any; 
-  shortId: (id: string) => string; 
 }) {
   const location = useLocation();
   const { user, showWelcome, dismissWelcome, signOut } = useAuth();
