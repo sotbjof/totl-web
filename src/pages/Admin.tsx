@@ -25,19 +25,40 @@ function getTeamInitials(code: string | null): string {
 }
 function parseKickoffToISO(kickoffText: string): string | null {
   if (!kickoffText) return null;
-  const m = kickoffText.match(/^[A-Za-z]{3}\s+(\d{1,2}):(\d{2})\s+[A-Za-z]{3}\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3})/);
-  if (!m) return null;
-  const [, hh, mm, dayStr, monStr] = m;
-  const monthMap: Record<string, string> = {
-    Jan: "01", Feb: "02", Mar: "03", Apr: "04",
-    May: "05", Jun: "06", Jul: "07", Aug: "08",
-    Sep: "09", Oct: "10", Nov: "11", Dec: "12",
-  };
-  const month = monthMap[monStr];
-  if (!month) return null;
-  const year = new Date().getFullYear();
-  const day = dayStr.padStart(2, "0");
-  return `${year}-${month}-${day}T${hh}:${mm}:00Z`;
+  
+  // Try format with time: "Fri 15:30 Fri 15th Aug"
+  let m = kickoffText.match(/^[A-Za-z]{3}\s+(\d{1,2}):(\d{2})\s+[A-Za-z]{3}\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3})/);
+  if (m) {
+    const [, hh, mm, dayStr, monStr] = m;
+    const monthMap: Record<string, string> = {
+      Jan: "01", Feb: "02", Mar: "03", Apr: "04",
+      May: "05", Jun: "06", Jul: "07", Aug: "08",
+      Sep: "09", Oct: "10", Nov: "11", Dec: "12",
+    };
+    const month = monthMap[monStr];
+    if (!month) return null;
+    const year = new Date().getFullYear();
+    const day = dayStr.padStart(2, "0");
+    return `${year}-${month}-${day}T${hh}:${mm}:00Z`;
+  }
+  
+  // Try format without time: "Fri 15 Aug" - default to 15:00
+  m = kickoffText.match(/^[A-Za-z]{3}\s+(\d{1,2})\s+([A-Za-z]{3})/);
+  if (m) {
+    const [, dayStr, monStr] = m;
+    const monthMap: Record<string, string> = {
+      Jan: "01", Feb: "02", Mar: "03", Apr: "04",
+      May: "05", Jun: "06", Jul: "07", Aug: "08",
+      Sep: "09", Oct: "10", Nov: "11", Dec: "12",
+    };
+    const month = monthMap[monStr];
+    if (!month) return null;
+    const year = new Date().getFullYear();
+    const day = dayStr.padStart(2, "0");
+    return `${year}-${month}-${day}T15:00:00Z`; // Default to 15:00
+  }
+  
+  return null;
 }
 
 // Format ISO timestamp to compact human string "Fri 21:00 Fri 15 Aug"

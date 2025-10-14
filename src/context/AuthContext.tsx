@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [hasShownWelcome, setHasShownWelcome] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -42,15 +43,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       
       // Show welcome message only when user signs in via email confirmation (new users)
-      if (event === 'SIGNED_IN' && sess?.user) {
+      if (event === 'SIGNED_IN' && sess?.user && !hasShownWelcome) {
         // Check if this is a fresh email confirmation (not just a regular login)
         const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        
+        // Check various ways Supabase might indicate email confirmation
         const isEmailConfirmation = urlParams.get('type') === 'signup' || 
-                                  window.location.hash.includes('access_token') ||
-                                  urlParams.get('confirmation_token');
+                                  urlParams.get('confirmation_token') ||
+                                  hashParams.get('type') === 'signup' ||
+                                  hashParams.get('access_token') ||
+                                  window.location.search.includes('confirmation') ||
+                                  window.location.hash.includes('confirmation');
         
         if (isEmailConfirmation && sess.user.email_confirmed_at) {
           setShowWelcome(true);
+          setHasShownWelcome(true);
           // Clean up the URL to remove confirmation parameters
           window.history.replaceState({}, document.title, window.location.pathname);
         }
@@ -69,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function dismissWelcome() {
     setShowWelcome(false);
+    setHasShownWelcome(true);
   }
 
   return (

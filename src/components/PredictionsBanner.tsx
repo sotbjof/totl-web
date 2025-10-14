@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { getCurrentUser, onDevUserChange } from "../devAuth";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * Shows different banners based on game state:
@@ -9,13 +9,11 @@ import { getCurrentUser, onDevUserChange } from "../devAuth";
  *  - "Watch this space" when results published but next GW fixtures not ready
  */
 export default function PredictionsBanner() {
-  const [me, setMe] = React.useState(getCurrentUser());
+  const { user } = useAuth();
   const [visible, setVisible] = React.useState(false);
   const [currentGw, setCurrentGw] = React.useState<number | null>(null);
   const [bannerType, setBannerType] = React.useState<"predictions" | "watch-space" | null>(null);
   const [deadlineText, setDeadlineText] = React.useState<string | null>(null);
-
-  React.useEffect(() => onDevUserChange(setMe), []);
 
   React.useEffect(() => {
     let alive = true;
@@ -89,10 +87,16 @@ export default function PredictionsBanner() {
         }
 
         // Fixtures exist, no results - check if user has submitted
+        // Check if user has submitted
+        if (!user?.id) {
+          setVisible(false);
+          return;
+        }
+
         const { data: sub } = await supabase
           .from("gw_submissions")
           .select("user_id")
-          .eq("user_id", me.id)
+          .eq("user_id", user.id)
           .eq("gw", gw)
           .maybeSingle();
         if (!alive) return;
@@ -145,7 +149,7 @@ export default function PredictionsBanner() {
       window.removeEventListener('fixturesPublished', handleFixturesPublished);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [me.id]);
+  }, [user?.id]);
 
   if (!visible) return null;
 
@@ -174,7 +178,7 @@ export default function PredictionsBanner() {
       ) : (
         <div className="mt-4 rounded-lg bg-slate-100 px-4 py-3 border border-slate-200">
           <div className="text-center">
-            <div className="font-semibold text-slate-800">GW{currentGw || 1} Coming Soon</div>
+            <div className="font-semibold text-slate-800">GW{(currentGw || 1) + 1} Coming Soon</div>
             <div className="text-sm text-slate-600">Fixtures will be published soon.</div>
           </div>
         </div>

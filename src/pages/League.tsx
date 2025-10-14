@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
-const MAX_MEMBERS = 10;
+const MAX_MEMBERS = 8;
 
 /* =========================
    Types
    ========================= */
-type League = { id: string; name: string; code: string; created_at?: string };
+type League = { id: string; name: string; code: string; created_at?: string; created_by?: string };
 type Member = { id: string; name: string };
 
 type Fixture = {
@@ -128,8 +128,17 @@ export default function LeaguePage() {
   const [selectedGw, setSelectedGw] = useState<number | null>(null);  // for GW switcher
   const [availableGws, setAvailableGws] = useState<number[]>([]);     // available weeks with results
   const [showGwDropdown, setShowGwDropdown] = useState(false);         // for custom dropdown
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
 
   const [showInvite, setShowInvite] = useState(false);
+  const [showJoinConfirm, setShowJoinConfirm] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [showEndLeagueConfirm, setShowEndLeagueConfirm] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [firstMember, setFirstMember] = useState<Member | null>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -222,8 +231,9 @@ export default function LeaguePage() {
 
       const { data: mm } = await supabase
         .from("league_members")
-        .select("users(id,name)")
-        .eq("league_id", (lg as League).id);
+        .select("users(id,name),created_at")
+        .eq("league_id", (lg as League).id)
+        .order("created_at", { ascending: true });
 
       const mem: Member[] =
         (mm as any[])?.map((r) => ({
@@ -231,9 +241,20 @@ export default function LeaguePage() {
           name: r.users.name ?? "(no name)",
         })) ?? [];
 
-      mem.sort((a, b) => a.name.localeCompare(b.name));
-
-      setMembers(mem);
+      // Keep original join order for admin determination, but sort alphabetically for display
+      const memSorted = [...mem].sort((a, b) => a.name.localeCompare(b.name));
+      setMembers(memSorted);
+      
+      // Store the original order for admin determination
+      const firstMember = mem[0]; // First member by join order
+      setFirstMember(firstMember);
+      
+      // Check if user arrived via share link and should see join confirmation
+      if (user?.id && !mem.some(m => m.id === user.id)) {
+        // User is not already a member, show join confirmation
+        setShowJoinConfirm(true);
+      }
+      
       setLoading(false);
     })();
 
@@ -267,12 +288,112 @@ export default function LeaguePage() {
     }
   }
 
+  /* ---------- join league function ---------- */
+  async function joinLeague() {
+    if (!league || !user?.id) return;
+    
+    setJoining(true);
+    try {
+      // Check if league is full
+      if (members.length >= MAX_MEMBERS) {
+        alert("League is full (max 8 members).");
+        setShowJoinConfirm(false);
+        return;
+      }
+
+      // Join the league
+      const { error } = await supabase
+        .from("league_members")
+        .insert({ league_id: league.id, user_id: user.id });
+
+      if (error) throw error;
+
+      // Refresh the page to show updated membership
+      window.location.reload();
+    } catch (e: any) {
+      alert(e?.message ?? "Failed to join league.");
+    } finally {
+      setJoining(false);
+    }
+  }
+
+  /* ---------- admin functions ---------- */
+  // For now, if no created_by field exists, consider the first member as admin
+  // In the future, we'll add created_by field to the database
+  const isAdmin = useMemo(() => {
+    return league?.created_by === user?.id || (firstMember && firstMember.id === user?.id && !league?.created_by);
+  }, [league?.created_by, user?.id, firstMember]);
+  
+  const adminName = useMemo(() => {
+    return league?.created_by 
+      ? members.find(m => m.id === league.created_by)?.name || "Unknown"
+      : firstMember ? firstMember.name : "Unknown";
+  }, [league?.created_by, members, firstMember]);
+
+  // Admin logic working correctly
+  console.log("Admin values:", { isAdmin, adminName });
+
+  async function removeMember() {
+    if (!memberToRemove || !league || !user?.id) return;
+    
+    setRemoving(true);
+    try {
+      const { error } = await supabase
+        .from("league_members")
+        .delete()
+        .eq("league_id", league.id)
+        .eq("user_id", memberToRemove.id);
+
+      if (error) throw error;
+
+      // Refresh the page to show updated membership
+      window.location.reload();
+    } catch (e: any) {
+      alert(e?.message ?? "Failed to remove member.");
+    } finally {
+      setRemoving(false);
+      setShowRemoveConfirm(false);
+      setMemberToRemove(null);
+    }
+  }
+
+  async function endLeague() {
+    if (!league || !user?.id) return;
+    
+    setEnding(true);
+    try {
+      // Delete all league members first
+      const { error: membersError } = await supabase
+        .from("league_members")
+        .delete()
+        .eq("league_id", league.id);
+
+      if (membersError) throw membersError;
+
+      // Delete the league itself
+      const { error: leagueError } = await supabase
+        .from("leagues")
+        .delete()
+        .eq("id", league.id);
+
+      if (leagueError) throw leagueError;
+
+      // Redirect to leagues page
+      window.location.href = "/leagues";
+    } catch (e: any) {
+      alert(e?.message ?? "Failed to end league.");
+    } finally {
+      setEnding(false);
+      setShowEndLeagueConfirm(false);
+    }
+  }
+
   /* ---------- share league function ---------- */
   function shareLeague() {
     if (!league) return;
     
-    const shareText = `Join my mini league "${league.name}" on TotL! Use code: ${league.code}`;
-    const shareUrl = `${window.location.origin}/leagues`;
+    const shareText = `Join my mini league "${league.name}" on TotL!`;
+    const shareUrl = `${window.location.origin}/league/${league.code}`;
     
     // Try to use Web Share API first (mobile)
     if (navigator.share) {
@@ -284,7 +405,7 @@ export default function LeaguePage() {
     } else {
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`).then(() => {
-        alert("League code copied to clipboard!");
+        alert("League link copied to clipboard!");
       }).catch(() => {
         // Final fallback: show the code in a prompt
         prompt("Share this league code:", league.code);
@@ -297,7 +418,7 @@ export default function LeaguePage() {
     let alive = true;
 
     (async () => {
-      const gwForData = tab === "gwr" ? selectedGw : (tab === "gw" ? selectedGw : currentGw);
+      const gwForData = tab === "gwr" ? selectedGw : (tab === "gw" ? currentGw : currentGw);
       if (!gwForData) {
         setFixtures([]);
         setPicks([]);
@@ -447,8 +568,8 @@ export default function LeaguePage() {
             }
           });
 
-          // unicorn
-          if (correctUsers.length === 1) {
+          // unicorn (only for leagues with 3+ players)
+          if (correctUsers.length === 1 && members.length >= 3) {
             const uid = correctUsers[0];
             const row = map.get(uid)!;
             row.unicorns += 1;
@@ -584,6 +705,23 @@ export default function LeaguePage() {
           form: [] as ("W" | "D" | "L")[],
         }));
 
+    // Show single-player message
+    if (members.length === 1) {
+      return (
+        <div className="text-center p-8 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="text-6xl mb-4">👥</div>
+          <h3 className="text-xl font-semibold text-slate-900 mb-2">Invite at least one more user to make the ML start</h3>
+          <p className="text-slate-600 mb-4">Share your league code with friends to get the competition going!</p>
+          <button
+            onClick={() => setShowInvite(true)}
+            className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            Share League Code
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div>
         {/* Table container */}
@@ -602,7 +740,7 @@ export default function LeaguePage() {
                       <span className="text-center font-semibold w-8">W</span>
                       <span className="text-center font-semibold w-8">D</span>
                       <span className="text-center font-semibold w-10">OCP</span>
-                      <span className="text-center font-semibold w-8">🦄</span>
+                      {members.length >= 3 && <span className="text-center font-semibold w-8">🦄</span>}
                       <span className="text-center font-semibold w-10">PTS</span>
                     </div>
                   </div>
@@ -622,7 +760,7 @@ export default function LeaguePage() {
                         <span className="text-center font-semibold w-8">{r.wins}</span>
                         <span className="text-center font-semibold w-8">{r.draws}</span>
                         <span className="text-center font-semibold w-10">{r.ocp}</span>
-                        <span className="text-center font-semibold w-8">{r.unicorns}</span>
+                        {members.length >= 3 && <span className="text-center font-semibold w-8">{r.unicorns}</span>}
                         <span className="text-center font-bold text-emerald-600 w-10">{r.mltPts}</span>
                       </div>
                     )}
@@ -670,11 +808,11 @@ export default function LeaguePage() {
   }
 
   function GwPicksTab() {
-    const picksGw = selectedGw;
+    const picksGw = currentGw;
     if (!picksGw) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
-          No game week selected.
+          No current game week available.
         </div>
       );
     }
@@ -951,8 +1089,8 @@ export default function LeaguePage() {
         r.score += 1;
       });
 
-      // unicorn
-      if (correctIds.length === 1) {
+      // unicorn (only for leagues with 3+ players)
+      if (correctIds.length === 1 && members.length >= 3) {
         const r = rows.find((x) => x.user_id === correctIds[0])!;
         r.unicorns += 1;
       }
@@ -987,7 +1125,7 @@ export default function LeaguePage() {
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Player</th>
                 <th className="text-center px-4 py-3 font-semibold text-slate-600">Score</th>
-                <th className="text-center px-4 py-3 font-semibold text-slate-600">🦄</th>
+                {members.length >= 3 && <th className="text-center px-4 py-3 font-semibold text-slate-600">🦄</th>}
               </tr>
             </thead>
             <tbody>
@@ -995,12 +1133,12 @@ export default function LeaguePage() {
                 <tr key={r.user_id} className="border-t border-slate-200">
                   <td className="px-4 py-3 font-bold text-slate-900">{r.name}</td>
                   <td className="px-4 py-3 text-center font-semibold text-emerald-600">{r.score}</td>
-                  <td className="px-4 py-3 text-center font-semibold">{r.unicorns}</td>
+                  {members.length >= 3 && <td className="px-4 py-3 text-center font-semibold">{r.unicorns}</td>}
                 </tr>
               ))}
               {!rows.length && (
                 <tr>
-                  <td className="px-4 py-6 text-slate-500 text-center" colSpan={3}>
+                  <td className="px-4 py-6 text-slate-500 text-center" colSpan={members.length >= 3 ? 3 : 2}>
                     No results recorded for GW {resGw} yet.
                   </td>
                 </tr>
@@ -1055,6 +1193,61 @@ export default function LeaguePage() {
             <div className="mt-0 mb-6 text-base text-slate-500">
               Code: <span className="font-mono font-semibold">{league.code}</span> · {members.length}/{MAX_MEMBERS} member{members.length === 1 ? "" : "s"}
             </div>
+            
+            {/* Admin indicator */}
+            {isAdmin && (
+              <div className="mb-4 text-sm text-slate-600 flex justify-center items-center">
+                Admin: <span className="font-semibold text-slate-800">{adminName}</span>
+                <button
+                  onClick={() => setShowAdminMenu(!showAdminMenu)}
+                  className="ml-2 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+                >
+                  ⚙️ Manage
+                </button>
+              </div>
+            )}
+            
+            {/* Admin Menu */}
+            {isAdmin && showAdminMenu && (
+              <div className="mb-4 bg-white border border-slate-200 rounded-lg shadow-lg p-4 w-full max-w-4xl mx-auto">
+                <h3 className="font-semibold text-slate-900 mb-3">League Management</h3>
+                
+                <div className="space-y-2">
+                  <div className="text-sm text-slate-600 mb-3">Remove Members:</div>
+                  {members.filter(m => m.id !== user?.id).map((member) => (
+                    <div key={member.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-md">
+                      <span className="text-sm font-medium text-slate-800">{member.name}</span>
+                      <button
+                        onClick={() => {
+                          setMemberToRemove(member);
+                          setShowRemoveConfirm(true);
+                          setShowAdminMenu(false);
+                        }}
+                        className="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {members.filter(m => m.id !== user?.id).length === 0 && (
+                    <div className="text-sm text-slate-500 italic py-2">No other members to remove</div>
+                  )}
+                </div>
+                
+                <div className="mt-4 pt-3 border-t border-slate-200">
+                  <button
+                    onClick={() => {
+                      setShowEndLeagueConfirm(true);
+                      setShowAdminMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors"
+                  >
+                    🗑️ End League
+                  </button>
+                </div>
+              </div>
+            )}
             
             <div className="flex items-center justify-center gap-2">
               <button
@@ -1111,7 +1304,7 @@ export default function LeaguePage() {
                   : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
-              {selectedGw ? `GW ${selectedGw} Picks` : "GW Picks"}
+              {currentGw ? `GW ${currentGw} Picks` : "GW Picks"}
             </button>
             <button
               onClick={() => setTab("mlt")}
@@ -1134,8 +1327,8 @@ export default function LeaguePage() {
           {tab === "gwr" && <GwResultsTab />}
         </div>
 
-        {/* Game Week Switcher - only show for GW tabs, positioned below content */}
-        {(tab === "gw" || tab === "gwr") && availableGws.length > 0 && (
+        {/* Game Week Switcher - only show for GW Results tab, positioned below content */}
+        {tab === "gwr" && availableGws.length > 0 && (
           <div className="mt-6 flex items-center justify-center">
             <div className="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-4 py-2 shadow-sm">
               <span className="text-sm font-medium text-slate-600">Game Week:</span>
@@ -1240,6 +1433,99 @@ export default function LeaguePage() {
                 disabled={leaving}
               >
                 {leaving ? "Leaving..." : "Leave League"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Join Confirmation Popup */}
+      {showJoinConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              Join Mini League
+            </h3>
+            <p className="text-slate-600 mb-6">
+              You are about to join <strong>"{league?.name}"</strong>. Are you sure?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowJoinConfirm(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 transition-colors"
+                disabled={joining}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={joinLeague}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                disabled={joining}
+              >
+                {joining ? "Joining..." : "Join League"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove Member Confirmation Popup */}
+      {showRemoveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              Remove Member
+            </h3>
+            <p className="text-slate-600 mb-6">
+              Are you sure you want to remove <strong>"{memberToRemove?.name}"</strong> from the league? They will need the league code to rejoin.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowRemoveConfirm(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 transition-colors"
+                disabled={removing}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={removeMember}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                disabled={removing}
+              >
+                {removing ? "Removing..." : "Remove Member"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* End League Confirmation Popup */}
+      {showEndLeagueConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-red-600 mb-2">
+              ⚠️ End League
+            </h3>
+            <p className="text-slate-600 mb-4">
+              Are you absolutely sure you want to <strong>permanently end</strong> the league <strong>"{league?.name}"</strong>?
+            </p>
+            <p className="text-sm text-red-600 mb-6">
+              This will remove all members and delete the league forever. This action cannot be undone!
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowEndLeagueConfirm(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 transition-colors"
+                disabled={ending}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={endLeague}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                disabled={ending}
+              >
+                {ending ? "Ending..." : "Yes, End League"}
               </button>
             </div>
           </div>

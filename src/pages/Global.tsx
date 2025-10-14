@@ -336,6 +336,10 @@ export default function GlobalLeaderboardPage() {
                   if (activeTab === "overall") {
                     const prev = prevRanks[r.user_id];
                     const curr = currRanks[r.user_id];
+                    
+                    // Check if player has played the current game week
+                    const hasPlayedCurrentGw = gwPoints.some(gp => gp.user_id === r.user_id && gp.gw === latestGw);
+                    
                     if (curr && prev) {
                       if (curr < prev) {
                         indicator = "▲"; // moved up
@@ -344,12 +348,19 @@ export default function GlobalLeaderboardPage() {
                         indicator = "▼"; // moved down
                         indicatorClass = "bg-red-500 text-white";
                       } else {
+                        indicator = "→"; // same position - right arrow
+                        indicatorClass = "bg-gray-500 text-white";
+                      }
+                    } else if (curr && !prev) {
+                      // Only show blue dot if they haven't played the current GW
+                      if (!hasPlayedCurrentGw) {
+                        indicator = ""; // new entrant - empty blue dot
+                        indicatorClass = "bg-blue-500 text-white";
+                      } else {
+                        // They have played current GW but no previous rank (first week)
                         indicator = ""; // no change - empty circle
                         indicatorClass = "bg-gray-400";
                       }
-                    } else if (curr && !prev) {
-                      indicator = ""; // new entrant - empty blue dot
-                      indicatorClass = "bg-blue-500 text-white";
                     }
                   }
 

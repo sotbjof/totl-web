@@ -492,7 +492,15 @@ export default function HomePage() {
           {loading ? (
             <div className="p-4 text-slate-500">Loading…</div>
           ) : leagues.length === 0 ? (
-            <div className="p-4 text-slate-500">You haven't joined any leagues yet.</div>
+            <div className="p-6 bg-white rounded-lg border border-slate-200 text-center">
+              <div className="text-slate-600 mb-3">You don't have any mini leagues yet.</div>
+              <Link 
+                to="/leagues" 
+                className="inline-block px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors no-underline"
+              >
+                Create one now!
+              </Link>
+            </div>
           ) : (
             <div className="space-y-3">
               {leagues.map((l) => (

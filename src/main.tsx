@@ -43,25 +43,13 @@ function AppContent({ menuOpen, setMenuOpen, me, shortId }: {
   shortId: (id: string) => string; 
 }) {
   const location = useLocation();
-  const { showWelcome, dismissWelcome } = useAuth();
+  const { user, showWelcome, dismissWelcome, signOut } = useAuth();
+  
+  // Admin user ID (Jof)
+  const isAdmin = user?.id === '4542c037-5b38-40d0-b189-847b8f17c222';
   
   return (
     <>
-      {/* Dev User Selector - Above Header */}
-      {import.meta.env.DEV && (
-        <div className="bg-gray-100 text-xs py-1 flex justify-center items-center gap-3 border-b border-gray-300">
-          <span className="text-gray-600 font-medium">{me.name}. -{shortId(me.id)}</span>
-          {["Jof", "Carl"].map(name => (
-            <button
-              key={name}
-              onClick={() => setDevUser(name)}
-              className="px-2 py-1 rounded bg-white border hover:bg-gray-50"
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Site Header */}
       <header className="sticky top-0 z-50 text-white shadow">
@@ -77,7 +65,22 @@ function AppContent({ menuOpen, setMenuOpen, me, shortId }: {
               <Link to="/predictions" className="text-white no-underline hover:opacity-90 text-xl font-bold">Predictions</Link>
               <Link to="/global" className="text-white no-underline hover:opacity-90 text-xl font-bold">Leaderboard</Link>
               <Link to="/how-to-play" className="text-white no-underline hover:opacity-90 text-xl font-bold">How To Play</Link>
-              <Link to="/admin" className="text-white no-underline hover:opacity-90 text-xl font-bold">Admin</Link>
+              {isAdmin && <Link to="/admin" className="text-white no-underline hover:opacity-90 text-xl font-bold">Admin</Link>}
+            </div>
+
+            {/* User info and logout - desktop only */}
+            <div className="ml-auto hidden sm:flex items-center gap-4">
+              <div className="text-white/90 text-sm">
+                {user?.user_metadata?.display_name || user?.email || 'User'}
+              </div>
+              <button
+                onClick={async () => {
+                  await signOut();
+                }}
+                className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-md text-white text-sm font-medium transition-colors"
+              >
+                Sign Out
+              </button>
             </div>
 
             {/* Hamburger menu */}
@@ -99,7 +102,14 @@ function AppContent({ menuOpen, setMenuOpen, me, shortId }: {
           {menuOpen && (
             <div className="sm:hidden border-t border-white/20">
               <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-4 text-white">
-                {/* Removed signed-in pill from here */}
+                {/* User info for mobile */}
+                <div className="pb-2 border-b border-white/20 mb-2">
+                  <div className="text-sm text-white/70">Logged in as:</div>
+                  <div className="font-medium text-white">
+                    {user?.user_metadata?.display_name || user?.email || 'User'}
+                  </div>
+                </div>
+                
                 <Link
                   to="/tables"
                   className="text-white no-underline hover:opacity-90 text-xl font-bold"
@@ -128,13 +138,26 @@ function AppContent({ menuOpen, setMenuOpen, me, shortId }: {
                 >
                   How To Play
                 </Link>
-                <Link
-                  to="/admin"
-                  className="text-white no-underline hover:opacity-90 text-xl font-bold"
-                  onClick={() => setMenuOpen(false)}
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="text-white no-underline hover:opacity-90 text-xl font-bold"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Admin
+                  </Link>
+                )}
+                
+                {/* Mobile logout */}
+                <button
+                  onClick={async () => {
+                    await signOut();
+                    setMenuOpen(false);
+                  }}
+                  className="text-left text-red-200 hover:text-red-100 text-lg font-bold border-t border-white/20 pt-4 mt-2"
                 >
-                  Admin
-                </Link>
+                  Sign Out
+                </button>
               </div>
             </div>
           )}

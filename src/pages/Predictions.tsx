@@ -152,6 +152,13 @@ export default function PredictionsPage() {
   const [error, setError] = useState<string>("");
   const [showSubmitConfirm, setShowSubmitConfirm] = useState<boolean>(false);
 
+  // Auto-scroll to top when submitted
+  useEffect(() => {
+    if (submitted) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [submitted]);
+
   // Sync GW with server meta and refresh on focus
   useEffect(() => {
     let alive = true;
@@ -399,15 +406,6 @@ export default function PredictionsPage() {
         <div className="text-slate-600 text-lg font-semibold mt-1">Game Week {gwOr(gw)}</div>
       </div>
 
-      {/* submitted badge (only while results are not in) */}
-      {!gwFinished && submitted && (
-        <div className="mt-3">
-          <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 px-4 py-2 border border-emerald-300 font-bold shadow-sm">
-            Submitted
-          </span>
-        </div>
-      )}
-
       {/* status / summary */}
       <div className="mt-3">
         {gwFinished ? (
@@ -441,6 +439,20 @@ export default function PredictionsPage() {
         </div>
       ) : (
         <div className="mt-6 space-y-6">
+          {/* submitted badge (only while results are not in) */}
+          {!gwFinished && submitted && (
+            <div className="bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 rounded-2xl p-6 text-center shadow-2xl shadow-emerald-500/30 transform scale-105 relative overflow-hidden">
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2s_ease-in-out_infinite]"></div>
+              
+              <div className="relative z-10">
+                <div className="text-white font-bold text-2xl mb-1">Predictions Submitted!</div>
+                <div className="text-emerald-100 text-lg">Your picks are locked in for GW {gw}</div>
+                <div className="text-emerald-200 text-sm mt-2">Good luck!</div>
+              </div>
+            </div>
+          )}
+          
           {grouped.map((grp, i) => (
             <div key={i}>
               <div className="text-sm font-semibold text-slate-700 mb-3">
