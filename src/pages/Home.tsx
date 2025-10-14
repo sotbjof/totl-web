@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
@@ -24,7 +24,6 @@ type PickRow = { user_id: string; gw: number; fixture_index: number; pick: "H" |
 // Results for outcome + helper to derive H/D/A if only goals exist
 
 
-
 export default function HomePage() {
   const { user } = useAuth();
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -42,6 +41,8 @@ export default function HomePage() {
   const [lastScore, setLastScore] = useState<number | null>(null);
   const [lastScoreGw, setLastScoreGw] = useState<number | null>(null);
 
+  const [unreadByLeague, setUnreadByLeague] = useState<Record<string, number>>({});
+  const leagueIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let alive = true;
@@ -219,7 +220,52 @@ export default function HomePage() {
       userPicks.forEach((p) => (map[p.fixture_index] = p.pick));
 
       setLeagues(ls);
-      
+      leagueIdsRef.current = new Set(ls.map((l) => l.id));
+
+      // unread-by-league (robust)
+      try {
+        let reads: any[] | null = null;
+        try {
+          const { data, error } = await supabase
+            .from("league_message_reads")
+            .select("league_id,last_read_at")
+            .eq("user_id", user?.id);
+          if (error) {
+            console.warn("league_message_reads not accessible, defaulting to no reads", error?.message);
+            reads = null;
+          } else {
+            reads = data as any[] | null;
+          }
+        } catch (err: any) {
+          console.warn("league_message_reads query failed — defaulting to no reads", err?.message);
+          reads = null;
+        }
+
+        const lastRead = new Map<string, string>();
+        (reads ?? []).forEach((r: any) => lastRead.set(r.league_id, r.last_read_at));
+
+        const out: Record<string, number> = {};
+        for (const lg of ls) {
+          const since = lastRead.get(lg.id) ?? "1970-01-01T00:00:00Z";
+          const { data: msgs, count, error } = await supabase
+            .from("league_messages")
+            .select("id", { count: "exact" })
+            .eq("league_id", lg.id)
+            .gte("created_at", since);
+          if (error) {
+            console.warn("unread count query error", lg.id, error?.message);
+          }
+          out[lg.id] = typeof count === "number" ? count : (msgs?.length ?? 0);
+        }
+        if (alive) setUnreadByLeague(out);
+      } catch (e) {
+        // best-effort; ignore errors
+      }
+
+      setFixtures(thisGwFixtures);
+      setPicksMap(map);
+      setLoading(false);
+
       // Check submission status for each league
       const submissionStatus: Record<string, boolean> = {};
       for (const league of ls) {
@@ -349,6 +395,63 @@ export default function HomePage() {
     return () => { alive = false; };
   }, [user?.id]);
 
+  // Realtime: increment unread badge on new messages in any of my leagues
+  useEffect(() => {
+    const channel = supabase
+      .channel(`home-unreads:${user?.id ?? "anon"}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "league_messages" },
+        (payload) => {
+          try {
+            const lg = (payload as any)?.new?.league_id as string | undefined;
+            const sender = (payload as any)?.new?.user_id as string | undefined;
+            if (!lg) return;
+            if (!leagueIdsRef.current.has(lg)) return;
+            if (sender && sender === user?.id) return;
+            setUnreadByLeague((prev) => ({
+              ...prev,
+              [lg]: (prev?.[lg] ?? 0) + 1,
+            }));
+          } catch {}
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  // When window gains focus (e.g., user read chat and returns), resync unread counts
+  useEffect(() => {
+    const onFocus = async () => {
+      try {
+        const { data: reads } = await supabase
+          .from("league_message_reads")
+          .select("league_id,last_read_at")
+          .eq("user_id", user?.id);
+
+        const lastRead = new Map<string, string>();
+        (reads ?? []).forEach((r: any) => lastRead.set(r.league_id, r.last_read_at));
+
+        const out: Record<string, number> = {};
+        for (const leagueId of leagueIdsRef.current) {
+          const since = lastRead.get(leagueId) ?? "1970-01-01T00:00:00Z";
+          const { data: msgs, count } = await supabase
+            .from("league_messages")
+            .select("id", { count: "exact" })
+            .eq("league_id", leagueId)
+            .gte("created_at", since);
+          out[leagueId] = typeof count === "number" ? count : (msgs?.length ?? 0);
+        }
+        setUnreadByLeague(out);
+      } catch {}
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [user?.id]);
+
   const Section: React.FC<{
     title: string;
     subtitle?: React.ReactNode;
@@ -379,18 +482,15 @@ export default function HomePage() {
     </section>
   );
 
-
   const Dot: React.FC<{ correct?: boolean }> = ({ correct }) => {
-          if (correct === true) {
-            return <span className="inline-block h-5 w-5 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 shadow-xl shadow-yellow-400/40 ring-2 ring-yellow-300/60 transform scale-125 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s]" />;
+    if (correct === true) {
+      return <span className="inline-block h-5 w-5 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 shadow-xl shadow-yellow-400/40 ring-2 ring-yellow-300/60 transform scale-125 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s]" />;
     } else if (correct === false) {
       return <span className="inline-block h-5 w-5 rounded-full bg-red-500 border-2 border-white shadow ring-1 ring-red-300" />;
     } else {
       return <span className="inline-block h-5 w-5 rounded-full bg-emerald-500 border-2 border-white shadow ring-1 ring-emerald-300" />;
     }
   };
-
-
 
   const LeaderCard: React.FC<{
     title: string;
@@ -437,7 +537,7 @@ export default function HomePage() {
     return inner;
   };
 
-    const GWCard: React.FC<{ gw: number; score: number | null; submitted: boolean; }> = ({ gw, score, submitted }) => {
+  const GWCard: React.FC<{ gw: number; score: number | null; submitted: boolean; }> = ({ gw, score, submitted }) => {
     const display = score !== null ? score : (submitted ? 0 : NaN);
     return (
       <div className="h-full rounded-3xl border-2 border-emerald-200 bg-emerald-50/50 p-4 sm:p-6 relative">
@@ -484,7 +584,7 @@ export default function HomePage() {
       </Section>
 
       {/* Mini Leagues */}
-      <section className="mt-6">
+      <section className="mt-12">
         <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
           Mini Leagues
         </h2>
@@ -502,37 +602,52 @@ export default function HomePage() {
               </Link>
             </div>
           ) : (
-            <div className="space-y-3">
-              {leagues.map((l) => (
-                <Link 
-                  key={l.id} 
-                  to={`/league/${l.code}`} 
-                  className="block p-4 bg-white hover:bg-emerald-50 transition-colors no-underline"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-lg font-semibold text-slate-900">
-                        {l.name}
-                      </div>
-                      {leagueSubmissions[l.id] && (
-                        <div className="text-sm text-emerald-600 font-bold mt-1">
-                          All Submitted
+            <div className="rounded-2xl border bg-slate-50 overflow-hidden">
+              <ul>
+                {leagues.map((l, idx) => {
+                  const unread = unreadByLeague?.[l.id] ?? 0;
+                  const badge = unread > 0 ? Math.min(unread, 99) : 0;
+                  const rowBorder = idx ? "border-t" : "";
+                  return (
+                    <li key={l.id} className={rowBorder}>
+                      <Link
+                        to={`/league/${l.code}`}
+                        className="block p-4 bg-white hover:bg-emerald-50 transition-colors no-underline"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-lg font-semibold text-slate-900">
+                              {l.name}
+                            </div>
+                            {leagueSubmissions[l.id] && (
+                              <div className="text-sm text-emerald-600 font-bold mt-1">
+                                All Submitted
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {badge > 0 && (
+                              <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-emerald-600 text-white text-sm font-bold">
+                                {badge}
+                              </span>
+                            )}
+                            <div className="px-3 py-1 bg-slate-100 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-200 transition-colors">
+                              View
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <div className="px-3 py-1 bg-slate-100 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-200 transition-colors">
-                      View
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
         </div>
       </section>
 
       {/* Games (first GW) */}
-      <section className="mt-6">
+      <section className="mt-12">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
             Games
@@ -587,75 +702,73 @@ export default function HomePage() {
                   <div className="rounded-2xl border bg-slate-50 overflow-hidden mb-6">
                     <ul>
                       {grouped[day].map((f) => {
-                    const pick = picksMap[f.fixture_index];
-                    const homeKey = f.home_code || f.home_name || f.home_team || "";
-                    const awayKey = f.away_code || f.away_name || f.away_team || "";
+                        const pick = picksMap[f.fixture_index];
+                        const homeKey = f.home_code || f.home_name || f.home_team || "";
+                        const awayKey = f.away_code || f.away_name || f.away_team || "";
 
-                    const homeName = getMediumName(homeKey);
-                    const awayName = getMediumName(awayKey);
+                        const homeName = getMediumName(homeKey);
+                        const awayName = getMediumName(awayKey);
 
-                    // build badge path using the team codes directly
-                    const homeBadge = `/assets/badges/${homeKey.toUpperCase()}.png`;
-                    const awayBadge = `/assets/badges/${awayKey.toUpperCase()}.png`;
-                    // For border, only apply to non-first fixture overall
-                    const liClass = idx++ ? "border-t" : undefined;
-                    return (
-                      <li key={f.id} className={liClass}>
-                        <div className="p-4 bg-white">
-                          <div className="grid grid-cols-3 items-center gap-2">
-                            <div className="flex items-center justify-center pr-1">
-                              <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{homeName}</span>
-                            </div>
-                            <div className="flex items-center justify-center gap-1">
-                              <img src={homeBadge} alt={`${homeName} badge`} className="h-4 w-3" />
-                              <div className="text-[15px] sm:text-base font-semibold text-slate-600">
-                                {f.kickoff_time
-                                  ? new Date(f.kickoff_time).toLocaleTimeString(undefined, {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      hour12: false,
-                                    })
-                                  : ""}
+                        const homeBadge = `/assets/badges/${homeKey.toUpperCase()}.png`;
+                        const awayBadge = `/assets/badges/${awayKey.toUpperCase()}.png`;
+                        const liClass = idx++ ? "border-t" : undefined;
+                        return (
+                          <li key={f.id} className={liClass}>
+                            <div className="p-4 bg-white">
+                              <div className="grid grid-cols-3 items-center gap-2">
+                                <div className="flex items-center justify-center pr-1">
+                                  <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{homeName}</span>
+                                </div>
+                                <div className="flex items-center justify-center gap-1">
+                                  <img src={homeBadge} alt={`${homeName} badge`} className="h-4 w-3" />
+                                  <div className="text-[15px] sm:text-base font-semibold text-slate-600">
+                                    {f.kickoff_time
+                                      ? new Date(f.kickoff_time).toLocaleTimeString(undefined, {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          hour12: false,
+                                        })
+                                      : ""}
+                                  </div>
+                                  <img src={awayBadge} alt={`${awayName} badge`} className="h-4 w-3" />
+                                </div>
+                                <div className="flex items-center justify-center pl-1">
+                                  <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{awayName}</span>
+                                </div>
                               </div>
-                              <img src={awayBadge} alt={`${awayName} badge`} className="h-4 w-3" />
+                              {/* Row: dots under H/D/A, always centered in each third */}
+                              <div className="mt-3 grid grid-cols-3 items-center">
+                                <div className="flex justify-center">
+                                  {pick === "H" ? (
+                                    <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "H" : undefined} />
+                                  ) : resultsMap[f.fixture_index] === "H" ? (
+                                    <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
+                                  ) : (
+                                    <span className="h-5" />
+                                  )}
+                                </div>
+                                <div className="flex justify-center">
+                                  {pick === "D" ? (
+                                    <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "D" : undefined} />
+                                  ) : resultsMap[f.fixture_index] === "D" ? (
+                                    <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
+                                  ) : (
+                                    <span className="h-5" />
+                                  )}
+                                </div>
+                                <div className="flex justify-center">
+                                  {pick === "A" ? (
+                                    <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "A" : undefined} />
+                                  ) : resultsMap[f.fixture_index] === "A" ? (
+                                    <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
+                                  ) : (
+                                    <span className="h-5" />
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-center pl-1">
-                              <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{awayName}</span>
-                            </div>
-                          </div>
-                          {/* Row: dots under H/D/A, always centered in each third */}
-                          <div className="mt-3 grid grid-cols-3 items-center">
-                            <div className="flex justify-center">
-                              {pick === "H" ? (
-                                <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "H" : undefined} />
-                              ) : resultsMap[f.fixture_index] === "H" ? (
-                                <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
-                              ) : (
-                                <span className="h-5" />
-                              )}
-                            </div>
-                            <div className="flex justify-center">
-                              {pick === "D" ? (
-                                <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "D" : undefined} />
-                              ) : resultsMap[f.fixture_index] === "D" ? (
-                                <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
-                              ) : (
-                                <span className="h-5" />
-                              )}
-                            </div>
-                            <div className="flex justify-center">
-                              {pick === "A" ? (
-                                <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "A" : undefined} />
-                              ) : resultsMap[f.fixture_index] === "A" ? (
-                                <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
-                              ) : (
-                                <span className="h-5" />
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    );
+                          </li>
+                        );
                       })}
                     </ul>
                   </div>
