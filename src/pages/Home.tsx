@@ -719,8 +719,8 @@ export default function HomePage() {
                                 <div className="flex items-center justify-center pr-1">
                                   <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{homeName}</span>
                                 </div>
-                                <div className="flex items-center justify-center gap-1">
-                                  <img src={homeBadge} alt={`${homeName} badge`} className="h-4 w-3" />
+                                <div className="flex items-center justify-center gap-2">
+                                  <img src={homeBadge} alt={`${homeName} badge`} className="h-6 w-6" />
                                   <div className="text-[15px] sm:text-base font-semibold text-slate-600">
                                     {f.kickoff_time
                                       ? new Date(f.kickoff_time).toLocaleTimeString(undefined, {
@@ -730,7 +730,7 @@ export default function HomePage() {
                                         })
                                       : ""}
                                   </div>
-                                  <img src={awayBadge} alt={`${awayName} badge`} className="h-4 w-3" />
+                                  <img src={awayBadge} alt={`${awayName} badge`} className="h-6 w-6" />
                                 </div>
                                 <div className="flex items-center justify-center pl-1">
                                   <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{awayName}</span>
