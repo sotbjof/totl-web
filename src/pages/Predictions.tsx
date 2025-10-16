@@ -160,6 +160,7 @@ export default function PredictionsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [showSubmitConfirm, setShowSubmitConfirm] = useState<boolean>(false);
+  const [isPastDeadline, setIsPastDeadline] = useState<boolean>(false);
 
   // Auto-scroll to top when submitted
   useEffect(() => {
@@ -226,6 +227,16 @@ export default function PredictionsPage() {
       const list = (fx as Fixture[]) ?? [];
       if (!mounted) return;
       setFixtures(list);
+
+      // Check deadline - submissions close 75 minutes before first kickoff
+      if (list.length > 0 && list[0].kickoff_time) {
+        const firstKickoff = new Date(list[0].kickoff_time);
+        const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000)); // 75 minutes before
+        const now = new Date();
+        setIsPastDeadline(now > deadlineTime);
+      } else {
+        setIsPastDeadline(false);
+      }
 
       // 2) my picks for this GW
       const { data: pk, error: pkErr } = await supabase
@@ -340,12 +351,51 @@ export default function PredictionsPage() {
   async function submitGW() {
     if (submitted) return;
     
+    // Check deadline - submissions close 75 minutes before first kickoff
+    if (fixtures.length > 0 && fixtures[0].kickoff_time) {
+      const firstKickoff = new Date(fixtures[0].kickoff_time);
+      const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000)); // 75 minutes before
+      const now = new Date();
+      
+      if (now > deadlineTime) {
+        const deadlineFormatted = deadlineTime.toLocaleDateString(undefined, { 
+          weekday: 'short', 
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        setError(`⚠️ Too late! Submissions closed at ${deadlineFormatted}. The deadline was 75 minutes before the first kickoff.`);
+        return;
+      }
+    }
+    
     // Show confirmation dialog
     setShowSubmitConfirm(true);
   }
 
   async function confirmSubmit() {
     if (submitted) return;
+    
+    // Check deadline - submissions close 75 minutes before first kickoff
+    if (fixtures.length > 0 && fixtures[0].kickoff_time) {
+      const firstKickoff = new Date(fixtures[0].kickoff_time);
+      const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000)); // 75 minutes before
+      const now = new Date();
+      
+      if (now > deadlineTime) {
+        const deadlineFormatted = deadlineTime.toLocaleDateString(undefined, { 
+          weekday: 'short', 
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        setError(`⚠️ Too late! Submissions closed at ${deadlineFormatted}. The deadline was 75 minutes before the first kickoff.`);
+        setShowSubmitConfirm(false);
+        return;
+      }
+    }
     
     // ensure picks are saved first
     await saveGW();
@@ -438,6 +488,33 @@ export default function PredictionsPage() {
         <div className="mt-4 rounded border border-rose-200 bg-rose-50 text-rose-700 px-3 py-2 text-sm">
           {error}
         </div>
+      )}
+
+      {/* deadline warning banner */}
+      {!submitted && fixtures.length > 0 && fixtures[0].kickoff_time && !isPastDeadline && (
+        (() => {
+          const firstKickoff = new Date(fixtures[0].kickoff_time);
+          const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000));
+          const now = new Date();
+          const timeUntilDeadline = deadlineTime.getTime() - now.getTime();
+          const hoursUntilDeadline = timeUntilDeadline / (1000 * 60 * 60);
+          
+          if (hoursUntilDeadline <= 2 && hoursUntilDeadline > 0) {
+            const deadlineFormatted = deadlineTime.toLocaleDateString(undefined, { 
+              weekday: 'short', 
+              month: 'short', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            return (
+              <div className="mt-4 rounded border border-amber-200 bg-amber-50 text-amber-800 px-3 py-2 text-sm">
+                ⏰ <strong>Deadline approaching!</strong> Submissions close at {deadlineFormatted} (75 minutes before first kickoff).
+              </div>
+            );
+          }
+          return null;
+        })()
       )}
 
       {/* grouped by day */}
@@ -610,20 +687,24 @@ export default function PredictionsPage() {
             </button>
             <button
               onClick={submitGW}
-              disabled={Object.values(choices).filter(Boolean).length !== fixtures.length}
+              disabled={isPastDeadline || Object.values(choices).filter(Boolean).length !== fixtures.length}
               className={cls(
                 "flex-1 px-4 py-3 rounded-md text-white font-semibold transition-colors",
-                Object.values(choices).filter(Boolean).length === fixtures.length
+                isPastDeadline
+                  ? "bg-red-500 cursor-not-allowed"
+                  : Object.values(choices).filter(Boolean).length === fixtures.length
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-gray-400 cursor-not-allowed"
               )}
               title={
-                Object.values(choices).filter(Boolean).length === fixtures.length
+                isPastDeadline
+                  ? "⚠️ Submissions closed - deadline has passed"
+                  : Object.values(choices).filter(Boolean).length === fixtures.length
                   ? "Submitting locks your picks for this GW."
                   : `Complete all ${fixtures.length} predictions before submitting`
               }
             >
-              Submit GW
+              {isPastDeadline ? "⚠️ Deadline Passed" : "Submit GW"}
             </button>
           </div>
           <div className="mt-2 text-center">
