@@ -197,7 +197,7 @@ function ChatTab({ chat, userId, nameById, isMember, newMsg, setNewMsg, onSend }
 export default function LeaguePage() {
   const { code = "" } = useParams();
   const { user } = useAuth();
-  const [oldSchoolMode, setOldSchoolMode] = useState(() => {
+  const [oldSchoolMode] = useState(() => {
     const saved = localStorage.getItem('oldSchoolMode');
     return saved ? JSON.parse(saved) : false;
   });

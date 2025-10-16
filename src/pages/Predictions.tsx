@@ -139,7 +139,7 @@ function ResultButton({
 ------------------------------------------------ */
 export default function PredictionsPage() {
   const { user } = useAuth();
-  const [oldSchoolMode, setOldSchoolMode] = useState(() => {
+  const [oldSchoolMode] = useState(() => {
     const saved = localStorage.getItem('oldSchoolMode');
     return saved ? JSON.parse(saved) : false;
   });

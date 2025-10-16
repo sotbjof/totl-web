@@ -26,7 +26,7 @@ type PickRow = { user_id: string; gw: number; fixture_index: number; pick: "H" |
 
 export default function HomePage() {
   const { user } = useAuth();
-  const [oldSchoolMode, setOldSchoolMode] = useState(() => {
+  const [oldSchoolMode] = useState(() => {
     const saved = localStorage.getItem('oldSchoolMode');
     return saved ? JSON.parse(saved) : false;
   });
@@ -401,7 +401,7 @@ export default function HomePage() {
               console.log('Current rank calculation:', {
                 myIndex,
                 rank: myIndex + 1,
-                myScore: scores.get(user?.id),
+                myScore: scores.get(user?.id ?? ""),
                 ordered: ordered.slice(0, 5).map(([uid, score]) => ({ uid: uid.slice(0, 8), score }))
               });
               setGlobalRank(myIndex + 1);
@@ -415,7 +415,7 @@ export default function HomePage() {
                 console.log('Previous rank calculation (Global page logic):', {
                   prevMyIndex,
                   prevRank: prevMyIndex + 1,
-                  prevScore: prevScores.get(user?.id),
+                  prevScore: prevScores.get(user?.id ?? ""),
                   prevOrdered: prevOrdered.slice(0, 5).map(([uid, score]) => ({ uid: uid.slice(0, 8), score }))
                 });
                 setPrevGlobalRank(prevMyIndex + 1);
@@ -733,7 +733,7 @@ export default function HomePage() {
               });
               const days = Object.keys(grouped);
               let idx = 0;
-              return days.map((day, dayIndex) => (
+              return days.map((day) => (
                 <div key={day}>
                   <div className="mt-6 mb-3 text-slate-700 font-semibold text-lg">{day}</div>
                   <div className="rounded-2xl border bg-slate-50 overflow-hidden mb-6">
