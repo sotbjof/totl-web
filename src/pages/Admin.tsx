@@ -39,7 +39,7 @@ function parseKickoffToISO(kickoffText: string): string | null {
     if (!month) return null;
     const year = new Date().getFullYear();
     const day = dayStr.padStart(2, "0");
-    return `${year}-${month}-${day}T${hh}:${mm}:00Z`;
+    return `${year}-${month}-${day}T${hh}:${mm}:00`;
   }
   
   // Try format without time: "Fri 15 Aug" - default to 15:00
@@ -55,7 +55,7 @@ function parseKickoffToISO(kickoffText: string): string | null {
     if (!month) return null;
     const year = new Date().getFullYear();
     const day = dayStr.padStart(2, "0");
-    return `${year}-${month}-${day}T15:00:00Z`; // Default to 15:00
+    return `${year}-${month}-${day}T15:00:00`; // Default to 15:00
   }
   
   return null;
@@ -67,8 +67,10 @@ function formatKickoff(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (isNaN(d.valueOf())) return "";
   const w = d.toLocaleDateString(undefined, { weekday: "short" });
-  const hh = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
-  return `${w} ${hh}`;
+  // Format time as GMT (no timezone conversion)
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${w} ${hh}:${mm}`;
 }
 
 export default function AdminPage() {
