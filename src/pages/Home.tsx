@@ -26,6 +26,15 @@ type PickRow = { user_id: string; gw: number; fixture_index: number; pick: "H" |
 
 export default function HomePage() {
   const { user } = useAuth();
+  const [oldSchoolMode, setOldSchoolMode] = useState(() => {
+    const saved = localStorage.getItem('oldSchoolMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  // Save to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('oldSchoolMode', JSON.stringify(oldSchoolMode));
+  }, [oldSchoolMode]);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [leagueSubmissions, setLeagueSubmissions] = useState<Record<string, boolean>>({});
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
@@ -37,6 +46,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [globalCount, setGlobalCount] = useState<number | null>(null);
   const [globalRank, setGlobalRank] = useState<number | null>(null);
+  const [prevGlobalRank, setPrevGlobalRank] = useState<number | null>(null);
   const [nextGwComing, setNextGwComing] = useState<number | null>(null);
   const [lastScore, setLastScore] = useState<number | null>(null);
   const [lastScoreGw, setLastScoreGw] = useState<number | null>(null);
@@ -332,29 +342,16 @@ export default function HomePage() {
           } catch (_) { /* ignore */ }
         }
 
-        // 2) Rank — try dedicated view, else overall_ocp, else compute from picks+results
-        // 2a) dedicated view
+        // 2) Rank — use same logic as Global page (v_ocp_overall)
         try {
-          const { data: rk } = await supabase
-            .from("overall_ranks")
-            .select("rank")
-            .eq("user_id", user?.id)
-            .maybeSingle();
-          if (alive && rk?.rank != null) {
-            setGlobalRank(rk.rank as number);
-            return; // done
-          }
-        } catch (_) { /* ignore */ }
-
-        // 2b) overall_ocp ordering
-        try {
-          const { data: ocps } = await supabase
-            .from("overall_ocp")
+          const { data: ocp } = await supabase
+            .from("v_ocp_overall")
             .select("user_id, ocp")
             .order("ocp", { ascending: false });
-          if (alive && Array.isArray(ocps) && ocps.length) {
-            const idx = ocps.findIndex((row: any) => row.user_id === user?.id);
+          if (alive && Array.isArray(ocp) && ocp.length) {
+            const idx = ocp.findIndex((row: any) => row.user_id === user?.id);
             if (idx !== -1) {
+              console.log('Using v_ocp_overall (same as Global page):', idx + 1, 'from', ocp.length, 'players');
               setGlobalRank(idx + 1);
               return; // done
             }
@@ -375,7 +372,10 @@ export default function HomePage() {
           const outMap = new Map<string, "H"|"D"|"A">();
           results.forEach(r => { if (r.result === "H" || r.result === "D" || r.result === "A") outMap.set(`${r.gw}:${r.fixture_index}`, r.result); });
 
-          // score per user
+          // Get latest GW with results
+          const latestGw = Math.max(...results.map(r => r.gw));
+          
+          // Calculate current scores (all GWs)
           const scores = new Map<string, number>();
           picksAll.forEach(p => {
             const out = outMap.get(`${p.gw}:${p.fixture_index}`);
@@ -384,10 +384,43 @@ export default function HomePage() {
             else if (!scores.has(p.user_id)) scores.set(p.user_id, 0);
           });
 
+          // Calculate previous scores (up to latest GW - 1)
+          const prevScores = new Map<string, number>();
+          picksAll.forEach(p => {
+            if (p.gw >= latestGw) return; // Skip latest GW
+            const out = outMap.get(`${p.gw}:${p.fixture_index}`);
+            if (!out) return;
+            if (p.pick === out) prevScores.set(p.user_id, (prevScores.get(p.user_id) || 0) + 1);
+            else if (!prevScores.has(p.user_id)) prevScores.set(p.user_id, 0);
+          });
+
           if (scores.size) {
             const ordered = Array.from(scores.entries()).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
             const myIndex = ordered.findIndex(([uid]) => uid === user?.id);
-            if (alive && myIndex !== -1) setGlobalRank(myIndex + 1);
+            if (alive && myIndex !== -1) {
+              console.log('Current rank calculation:', {
+                myIndex,
+                rank: myIndex + 1,
+                myScore: scores.get(user?.id),
+                ordered: ordered.slice(0, 5).map(([uid, score]) => ({ uid: uid.slice(0, 8), score }))
+              });
+              setGlobalRank(myIndex + 1);
+            }
+
+            // Calculate previous rank if we have previous scores
+            if (prevScores.size > 0) {
+              const prevOrdered = Array.from(prevScores.entries()).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
+              const prevMyIndex = prevOrdered.findIndex(([uid]) => uid === user?.id);
+              if (alive && prevMyIndex !== -1) {
+                console.log('Previous rank calculation (Global page logic):', {
+                  prevMyIndex,
+                  prevRank: prevMyIndex + 1,
+                  prevScore: prevScores.get(user?.id),
+                  prevOrdered: prevOrdered.slice(0, 5).map(([uid, score]) => ({ uid: uid.slice(0, 8), score }))
+                });
+                setPrevGlobalRank(prevMyIndex + 1);
+              }
+            }
           }
         } catch (_) { /* ignore */ }
       } finally { /* no-op */ }
@@ -561,7 +594,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-4 bg-gray-50 min-h-screen">
+    <div className={`max-w-6xl mx-auto px-4 py-4 min-h-screen ${oldSchoolMode ? 'oldschool-theme' : ''}`}>
       {/* Leaderboards */}
       <Section title="Leaderboards" boxed={false}>
         <div className="grid grid-cols-2 gap-4">
@@ -574,7 +607,18 @@ export default function HomePage() {
               <div className="flex items-center gap-1">
                 <span>👥</span>
                 <span className="font-semibold">{globalCount ?? "—"}</span>
-                <span className="ml-1">⬆️</span>
+        {(() => {
+          if (globalRank === null || prevGlobalRank === null) {
+            return <span className="ml-1">—</span>;
+          }
+          if (globalRank < prevGlobalRank) {
+            return <span className="ml-1">⬆️</span>; // Moved up (better rank = lower number)
+          } else if (globalRank > prevGlobalRank) {
+            return <span className="ml-1">⬇️</span>; // Moved down (worse rank = higher number)
+          } else {
+            return <span className="ml-1">→</span>; // Same position
+          }
+        })()}
                 <span className="font-semibold">{globalRank ?? "—"}</span>
               </div>
             }
@@ -661,13 +705,6 @@ export default function HomePage() {
         <div className="text-slate-700 font-semibold text-lg mt-4 mb-0">
           <div className="flex justify-between items-center">
             <span>Game Week {gw}</span>
-            {fixtures.length > 0 && (() => {
-              const firstFixture = fixtures[0];
-              const firstDate = firstFixture.kickoff_time
-                ? new Date(firstFixture.kickoff_time).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })
-                : null;
-              return firstDate ? <span className="text-sm">{firstDate}</span> : null;
-            })()}
           </div>
           {gwScore !== null ? (
             <div className="mt-1">
@@ -698,7 +735,7 @@ export default function HomePage() {
               let idx = 0;
               return days.map((day, dayIndex) => (
                 <div key={day}>
-                  {dayIndex > 0 && <div className="mt-6 mb-3 text-slate-700 font-semibold text-lg">{day}</div>}
+                  <div className="mt-6 mb-3 text-slate-700 font-semibold text-lg">{day}</div>
                   <div className="rounded-2xl border bg-slate-50 overflow-hidden mb-6">
                     <ul>
                       {grouped[day].map((f) => {
@@ -778,6 +815,8 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+
     </div>
   );
 }

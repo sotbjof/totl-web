@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useState, useEffect } from "react";
 import SiteHeader from "./components/SiteHeader";
 import PredictionsBanner from "./components/PredictionsBanner";
 import HomePage from "./pages/Home";
@@ -7,9 +8,24 @@ import PredictionsPage from "./pages/Predictions";
 import AdminPage from "./pages/Admin";
 
 export default function App() {
+  const [oldSchoolMode, setOldSchoolMode] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('oldSchoolMode');
+    if (saved !== null) {
+      setOldSchoolMode(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('oldSchoolMode', JSON.stringify(oldSchoolMode));
+  }, [oldSchoolMode]);
+
   return (
     <Router>
-      <div className="min-h-screen bg-slate-50 text-slate-900 overflow-y-auto">
+      <div className={`min-h-screen overflow-y-auto ${oldSchoolMode ? 'oldschool-theme' : 'bg-slate-50 text-slate-900'}`}>
         <SiteHeader />
 
         {/* 🟡 Add this right under the header */}
@@ -23,6 +39,7 @@ export default function App() {
             <Route path="/admin" element={<AdminPage />} />
           </Routes>
         </main>
+
       </div>
     </Router>
   );

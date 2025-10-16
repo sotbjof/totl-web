@@ -139,6 +139,15 @@ function ResultButton({
 ------------------------------------------------ */
 export default function PredictionsPage() {
   const { user } = useAuth();
+  const [oldSchoolMode, setOldSchoolMode] = useState(() => {
+    const saved = localStorage.getItem('oldSchoolMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  // Save to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('oldSchoolMode', JSON.stringify(oldSchoolMode));
+  }, [oldSchoolMode]);
 
   // State
   const [gw, setGw] = useState<number | null>(null);
@@ -396,7 +405,7 @@ export default function PredictionsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className={`max-w-2xl mx-auto px-4 py-8 ${oldSchoolMode ? 'oldschool-theme' : ''}`}>
       {/* header */}
       <div className="text-center">
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">Predictions Center</h1>
@@ -652,6 +661,7 @@ export default function PredictionsPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

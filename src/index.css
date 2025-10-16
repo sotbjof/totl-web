@@ -1,4 +1,5 @@
 /* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -44,4 +45,567 @@ select option {
   font-size: 16px !important;
   min-height: 48px !important;
   line-height: 1.5 !important;
+}
+
+/* =========================
+   OLD SCHOOL MODE - SENSIBLE SOCCER THEME
+   ========================= */
+
+/* Pixelated font already imported at top */
+
+/* Old School Theme Variables */
+.oldschool-theme {
+  background: #100030 !important; /* Dark purple background */
+  color: #ffffff !important;
+  font-family: 'Press Start 2P', monospace !important;
+  image-rendering: pixelated !important;
+  image-rendering: -moz-crisp-edges !important;
+  image-rendering: crisp-edges !important;
+}
+
+/* Dark background with subtle pattern */
+.oldschool-theme::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 25% 25%, #200050 2px, transparent 2px),
+    radial-gradient(circle at 75% 75%, #200050 2px, transparent 2px);
+  background-size: 20px 20px;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Pixelated text rendering */
+.oldschool-theme * {
+  font-family: 'Press Start 2P', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  text-rendering: optimizeSpeed !important;
+  -webkit-font-smoothing: none !important;
+  -moz-osx-font-smoothing: unset !important;
+  color: #ffffff !important;
+}
+
+/* Headers SMALL - block caps, not bold */
+.oldschool-theme h1,
+.oldschool-theme h2,
+.oldschool-theme h3 {
+  font-size: 20px !important;
+  color: #ffffff !important; /* White */
+  text-shadow: 1px 1px 0px #000000 !important;
+  margin-bottom: 8px !important;
+  text-transform: uppercase !important;
+  font-weight: normal !important;
+}
+
+/* NUCLEAR OPTION for league page headers - override ALL Tailwind classes */
+.oldschool-theme h1.text-4xl,
+.oldschool-theme h1.text-5xl,
+.oldschool-theme h1.sm\:text-5xl,
+.oldschool-theme .text-4xl,
+.oldschool-theme .text-5xl,
+.oldschool-theme .sm\:text-5xl,
+.oldschool-theme .font-extrabold,
+.oldschool-theme .tracking-tight {
+  font-size: 20px !important;
+  font-weight: normal !important;
+  color: #ffffff !important;
+  text-shadow: 2px 2px 0px #000000 !important;
+  text-transform: uppercase !important;
+  line-height: 1.2 !important;
+  letter-spacing: normal !important;
+}
+
+/* AGGRESSIVE targeting of main section headers */
+.oldschool-theme section h2,
+.oldschool-theme .section h2,
+.oldschool-theme h2,
+.oldschool-theme section h2.text-2xl,
+.oldschool-theme section h2.text-3xl,
+.oldschool-theme section h2.font-extrabold,
+.oldschool-theme section h2.font-bold,
+.oldschool-theme section h2.sm\\:text-3xl,
+.oldschool-theme h2.text-2xl,
+.oldschool-theme h2.text-3xl,
+.oldschool-theme h2.font-extrabold,
+.oldschool-theme h2.font-bold,
+.oldschool-theme h2.sm\\:text-3xl {
+  font-size: 20px !important;
+  font-weight: normal !important;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 0px #000000 !important;
+  text-transform: uppercase !important;
+  line-height: 1.2 !important;
+}
+
+/* Normal size for sub-headers and other text */
+.oldschool-theme .text-sm,
+.oldschool-theme .text-base,
+.oldschool-theme .text-lg,
+.oldschool-theme .text-xl {
+  font-size: 10px !important;
+  font-weight: normal !important;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 0px #000000 !important;
+  text-transform: uppercase !important;
+}
+
+/* Keep ONLY score numbers MASSIVE - be very specific */
+.oldschool-theme .text-6xl:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6),
+.oldschool-theme .text-5xl:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6),
+.oldschool-theme .text-4xl:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6),
+.oldschool-theme .text-3xl:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6),
+.oldschool-theme .text-2xl:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
+  font-size: 40px !important;
+  font-weight: bold !important;
+  color: #ffffff !important;
+  text-shadow: 5px 5px 0px #000000 !important;
+  text-transform: none !important;
+}
+
+/* Buttons - retro gaming style */
+.oldschool-theme button {
+  background: #ff00ff !important; /* Bright magenta */
+  color: #000000 !important; /* Black text for legibility */
+  border: 3px solid #000000 !important; /* Black border */
+  padding: 8px 12px !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  image-rendering: pixelated !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+  transition: none !important;
+  border-radius: 0px !important; /* Harsh rectangles */
+}
+
+.oldschool-theme button:hover {
+  background: #cc00cc !important; /* Darker magenta on hover */
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+.oldschool-theme button:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 1px 1px 0px #000000 !important;
+}
+
+/* Override Tailwind button classes for active/selected states - darker colors with white border and black shadow */
+.oldschool-theme .bg-emerald-600,
+.oldschool-theme button.bg-emerald-600,
+.oldschool-theme .grid button.bg-emerald-600,
+.oldschool-theme .flex button.bg-emerald-600 {
+  background: #800080 !important; /* Dark purple */
+  color: #ffffff !important; /* White text */
+  border: 3px solid #ffffff !important; /* White border */
+  box-shadow: 3px 3px 0px #000000 !important; /* Black shadow */
+}
+
+.oldschool-theme .bg-emerald-600:hover,
+.oldschool-theme button.bg-emerald-600:hover {
+  background: #660066 !important; /* Darker purple on hover */
+  color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+/* Override Tailwind button classes for inactive/unselected states - darker colors with white border and black shadow */
+.oldschool-theme .text-slate-600,
+.oldschool-theme button.text-slate-600,
+.oldschool-theme .hover\:bg-white\/50,
+.oldschool-theme button.hover\:bg-white\/50,
+.oldschool-theme .grid button.text-slate-600,
+.oldschool-theme .flex button.text-slate-600 {
+  background: #004400 !important; /* Dark green */
+  color: #ffffff !important; /* White text */
+  border: 3px solid #ffffff !important; /* White border */
+  box-shadow: 3px 3px 0px #000000 !important; /* Black shadow */
+}
+
+.oldschool-theme .text-slate-600:hover,
+.oldschool-theme button.text-slate-600:hover,
+.oldschool-theme .hover\:bg-white\/50:hover,
+.oldschool-theme button.hover\:bg-white\/50:hover {
+  background: #003300 !important; /* Darker green on hover */
+  color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+/* Remove unwanted box background from ADMIN section */
+.oldschool-theme .bg-slate-100,
+.oldschool-theme button.bg-slate-100,
+.oldschool-theme button.hover\:bg-slate-200 {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Put the MANAGE button back in a box - smaller */
+.oldschool-theme .text-slate-600 button,
+.oldschool-theme .flex.justify-center button,
+.oldschool-theme .items-center button {
+  background: #ffff00 !important; /* Bright yellow */
+  color: #000000 !important;
+  border: 2px solid #ff0000 !important; /* Red border - thinner */
+  box-shadow: 2px 2px 0px #000000 !important; /* Smaller shadow */
+  padding: 2px 4px !important; /* Smaller padding */
+  font-size: 10px !important; /* Smaller text */
+}
+
+/* Chat message styling - remove block caps and add more padding */
+.oldschool-theme .rounded-lg.px-3.py-2 {
+  padding: 12px 16px !important; /* More padding */
+  text-transform: none !important; /* Remove block caps */
+}
+
+.oldschool-theme .whitespace-pre-wrap {
+  text-transform: none !important; /* Remove block caps from message content */
+}
+
+/* Darker background for sent messages (my messages) */
+.oldschool-theme .bg-emerald-600 {
+  background: #004400 !important; /* Dark green instead of bright emerald */
+  color: #ffffff !important; /* White text */
+}
+
+/* Also target the text-emerald-100 timestamp for sent messages */
+.oldschool-theme .text-emerald-100 {
+  color: #ffffff !important; /* White text for timestamp */
+}
+
+/* Remove the green box around the entire ADMIN line */
+.oldschool-theme .mb-4.text-sm.text-slate-600,
+.oldschool-theme div.mb-4,
+.oldschool-theme div.text-slate-600 {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove the white border around the tab button container */
+.oldschool-theme .grid.grid-cols-2,
+.oldschool-theme .rounded-lg,
+.oldschool-theme .p-1,
+.oldschool-theme .shadow-sm {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0px !important;
+  padding: 0px !important;
+}
+
+/* Cards and containers - varied colors like Sensible Soccer */
+.oldschool-theme .bg-white {
+  background: #200050 !important; /* Dark purple */
+  border: 2px solid #400080 !important; /* Lighter purple border */
+  box-shadow: 4px 4px 0px #000000 !important;
+  border-radius: 0px !important; /* Harsh rectangles */
+}
+
+/* MIXED UP homepage box colors - NO HOT PINK, like Sensible Soccer */
+.oldschool-theme .bg-white:nth-child(1) {
+  background: #004080 !important; /* Dark blue */
+  border: 3px solid #0080ff !important; /* Bright blue border */
+}
+
+.oldschool-theme .bg-white:nth-child(2) {
+  background: #408000 !important; /* Dark green */
+  border: 3px solid #80ff00 !important; /* Bright green border */
+}
+
+.oldschool-theme .bg-white:nth-child(3) {
+  background: #804000 !important; /* Dark orange */
+  border: 3px solid #ff8000 !important; /* Bright orange border */
+}
+
+.oldschool-theme .bg-white:nth-child(4) {
+  background: #400080 !important; /* Dark purple */
+  border: 3px solid #8000ff !important; /* Bright purple border */
+}
+
+.oldschool-theme .bg-white:nth-child(5) {
+  background: #800000 !important; /* Dark red */
+  border: 3px solid #ff0000 !important; /* Bright red border */
+}
+
+.oldschool-theme .bg-white:nth-child(6) {
+  background: #008080 !important; /* Teal */
+  border: 3px solid #00ffff !important; /* Bright cyan border */
+}
+
+.oldschool-theme .bg-white:nth-child(7) {
+  background: #808000 !important; /* Olive */
+  border: 3px solid #ffff00 !important; /* Bright yellow border */
+}
+
+.oldschool-theme .bg-white:nth-child(8) {
+  background: #800080 !important; /* Magenta */
+  border: 3px solid #ff00ff !important; /* Bright magenta border */
+}
+
+.oldschool-theme .bg-white:nth-child(9) {
+  background: #004040 !important; /* Dark teal */
+  border: 3px solid #00ff80 !important; /* Bright lime border */
+}
+
+.oldschool-theme .bg-white:nth-child(10) {
+  background: #804040 !important; /* Dark brown */
+  border: 3px solid #ff8080 !important; /* Light red border */
+}
+
+/* Make all rounded elements harsh rectangles */
+.oldschool-theme .rounded-lg,
+.oldschool-theme .rounded-md,
+.oldschool-theme .rounded-xl,
+.oldschool-theme .rounded,
+.oldschool-theme .rounded-sm,
+.oldschool-theme .rounded-full {
+  border-radius: 0px !important;
+}
+
+.oldschool-theme .bg-gray-50 {
+  background: #100030 !important;
+}
+
+.oldschool-theme .bg-emerald-50 {
+  background: #100030 !important;
+}
+
+.oldschool-theme .bg-blue-50 {
+  background: #100030 !important;
+}
+
+/* Text colors */
+.oldschool-theme .text-slate-800 {
+  color: #ffffff !important;
+}
+
+.oldschool-theme .text-slate-600 {
+  color: #c0c0c0 !important;
+}
+
+.oldschool-theme .text-slate-500 {
+  color: #808080 !important;
+}
+
+/* Links */
+.oldschool-theme a {
+  color: #00ffff !important; /* Cyan */
+  text-decoration: none !important;
+}
+
+.oldschool-theme a:hover {
+  color: #ffffff !important;
+  text-shadow: 1px 1px 0px #000000 !important;
+}
+
+/* Form elements */
+.oldschool-theme input {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #808080 !important;
+  padding: 6px 8px !important;
+  font-size: 10px !important;
+  font-family: 'Press Start 2P', monospace !important;
+}
+
+.oldschool-theme input:focus {
+  border-color: #00ff00 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px #00ff00 !important;
+}
+
+.oldschool-theme select {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #808080 !important;
+  padding: 6px 8px !important;
+  font-size: 10px !important;
+  font-family: 'Press Start 2P', monospace !important;
+}
+
+/* Special elements */
+.oldschool-theme .bg-emerald-600 {
+  background: #00ff00 !important; /* Bright green */
+  color: #000000 !important;
+}
+
+.oldschool-theme .bg-blue-600 {
+  background: #0000ff !important; /* Bright blue */
+  color: #ffffff !important;
+}
+
+.oldschool-theme .bg-yellow-500 {
+  background: #ffff00 !important; /* Bright yellow */
+  color: #000000 !important;
+}
+
+/* Grid and layout adjustments */
+.oldschool-theme .grid {
+  gap: 8px !important;
+}
+
+.oldschool-theme .p-4 {
+  padding: 8px !important;
+}
+
+.oldschool-theme .p-6 {
+  padding: 12px !important;
+}
+
+.oldschool-theme .px-4 {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.oldschool-theme .py-4 {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+/* Remove smooth transitions for pixelated feel */
+.oldschool-theme * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Special Old School Mode toggle styling */
+.oldschool-theme .bg-yellow-500 {
+  background: #ffff00 !important;
+  color: #000000 !important;
+  border: 3px solid #ff8000 !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+  font-size: 10px !important;
+  text-shadow: none !important;
+}
+
+/* Leaderboard cards - make ONLY the score numbers MASSIVE */
+.oldschool-theme .text-4xl {
+  font-size: 80px !important;
+  color: #ffffff !important;
+  text-shadow: 5px 5px 0px #000000 !important;
+  font-weight: bold !important;
+}
+
+/* Removed conflicting text-2xl and text-3xl rules - now handled by the specific selectors above */
+
+.oldschool-theme .text-xl {
+  font-size: 20px !important;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 0px #000000 !important;
+}
+
+.oldschool-theme .text-lg {
+  font-size: 18px !important;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 0px #000000 !important;
+}
+
+/* Make all numbers in leaderboard cards bigger */
+.oldschool-theme .font-bold {
+  font-size: 16px !important;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 0px #000000 !important;
+}
+
+/* Special styling for score numbers */
+.oldschool-theme .text-center {
+  font-size: 20px !important;
+  color: #ffffff !important;
+  text-shadow: 2px 2px 0px #000000 !important;
+}
+
+/* Add pixelated shadows to all bordered elements */
+.oldschool-theme .border {
+  box-shadow: 4px 4px 0px #000000 !important;
+  border-radius: 0px !important;
+}
+
+.oldschool-theme .border-2 {
+  box-shadow: 4px 4px 0px #000000 !important;
+  border-radius: 0px !important;
+}
+
+.oldschool-theme .border-4 {
+  box-shadow: 4px 4px 0px #000000 !important;
+  border-radius: 0px !important;
+}
+
+/* View button with DIFFERENT COLORS - bright and varied */
+.oldschool-theme button,
+.oldschool-theme .bg-white button,
+.oldschool-theme .bg-white .bg-white button,
+.oldschool-theme [class*="bg-"] button,
+.oldschool-theme .grid button,
+.oldschool-theme .flex button {
+  background: #004400 !important; /* Dark green background */
+  color: #ffffff !important; /* White text */
+  border: 3px solid #000000 !important; /* Black border */
+  box-shadow: 3px 3px 0px #000000 !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+  text-shadow: none !important;
+}
+
+/* Different colors for different button positions */
+.oldschool-theme .bg-white:nth-child(1) button {
+  background: #ff00ff !important; /* Magenta */
+  border: 3px solid #000000 !important;
+}
+
+.oldschool-theme .bg-white:nth-child(2) button {
+  background: #00ffff !important; /* Cyan */
+  border: 3px solid #000000 !important;
+}
+
+.oldschool-theme .bg-white:nth-child(3) button {
+  background: #ff8000 !important; /* Orange */
+  border: 3px solid #000000 !important;
+}
+
+.oldschool-theme .bg-white:nth-child(4) button {
+  background: #8000ff !important; /* Purple */
+  border: 3px solid #000000 !important;
+}
+
+.oldschool-theme .bg-white:nth-child(5) button {
+  background: #00ff00 !important; /* Green */
+  border: 3px solid #000000 !important;
+}
+
+/* Override hover states */
+.oldschool-theme button:hover,
+.oldschool-theme button:focus,
+.oldschool-theme button:active {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 3px solid #000000 !important;
+}
+
+/* VIEW button specifically - change background color for better contrast */
+.oldschool-theme .bg-slate-100,
+.oldschool-theme .bg-slate-200 {
+  background: #000000 !important; /* Black background */
+  color: #ffffff !important; /* White text */
+  border: 2px solid #ffffff !important; /* White border */
+}
+
+/* Old School Toggle Button - always visible and not affected by theme */
+.oldschool-toggle {
+  position: fixed !important;
+  bottom: 16px !important;
+  right: 16px !important;
+  z-index: 9999 !important;
+  font-family: 'Press Start 2P', monospace !important;
+  font-size: 8px !important;
+  background: #ffff00 !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  padding: 8px 12px !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+  text-transform: uppercase !important;
 }

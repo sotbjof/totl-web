@@ -137,7 +137,7 @@ function ChatTab({ chat, userId, nameById, isMember, newMsg, setNewMsg, onSend }
 
   return (
     <div className="mt-4">
-      <div className="flex flex-col h-[60vh]">
+      <div className="flex flex-col h-[30vh]">
         <div ref={listRef} className="flex-1 overflow-y-auto rounded-xl border bg-white shadow-sm p-3">
           {chat.map((m) => {
             const mine = m.user_id === userId;
@@ -197,13 +197,22 @@ function ChatTab({ chat, userId, nameById, isMember, newMsg, setNewMsg, onSend }
 export default function LeaguePage() {
   const { code = "" } = useParams();
   const { user } = useAuth();
+  const [oldSchoolMode, setOldSchoolMode] = useState(() => {
+    const saved = localStorage.getItem('oldSchoolMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  // Save to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('oldSchoolMode', JSON.stringify(oldSchoolMode));
+  }, [oldSchoolMode]);
 
   const [league, setLeague] = useState<League | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
   // tabs: Chat / Mini League Table / GW Picks / GW Results
-  const [tab, setTab] = useState<"chat" | "mlt" | "gw" | "gwr">("chat");
+  const [tab, setTab] = useState<"chat" | "mlt" | "gw" | "gwr">("gwr");
   const [showForm, setShowForm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -759,7 +768,7 @@ export default function LeaguePage() {
       const pad = 5 - last5.length;
 
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between w-full">
           {Array.from({ length: pad }).map((_, i) => (
             <div key={`dot-${i}`} className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
           ))}
@@ -815,7 +824,7 @@ export default function LeaguePage() {
         <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
           <div className="overflow-x-auto">
             <div className="min-w-full">
-              <div className="grid grid-cols-[48px_80px_200px] gap-0 bg-slate-50 text-xs font-semibold text-slate-600">
+              <div className="grid grid-cols-[32px_80px_1fr] gap-0 bg-slate-50 text-xs font-semibold text-slate-600">
                 <div className="px-2 py-3 text-left">#</div>
                 <div className="px-2 py-3 text-left">PLAYER</div>
                 {showForm ? (
@@ -827,16 +836,16 @@ export default function LeaguePage() {
                       <span className="text-center font-semibold w-8">D</span>
                       <span className="text-center font-semibold w-10">OCP</span>
                       {members.length >= 3 && <span className="text-center font-semibold w-8">🦄</span>}
-                      <span className="text-center font-semibold w-10">PTS</span>
+                      <span className="text-center font-semibold w-10 pr-2">PTS</span>
                     </div>
                   </div>
                 )}
               </div>
 
               {rows.map((r, i) => (
-                <div key={r.user_id} className="grid grid-cols-[48px_80px_200px] gap-0 border-t border-slate-200 text-sm">
+                <div key={r.user_id} className="grid grid-cols-[32px_80px_1fr] gap-0 border-t border-slate-200 text-sm">
                   <div className="px-2 py-3 font-semibold text-slate-600">{i + 1}</div>
-                  <div className="px-2 py-3 font-bold text-slate-900 truncate">{r.name}</div>
+                  <div className="px-2 py-3 font-bold text-slate-900 truncate text-xs">{r.name}</div>
                   <div className="px-2 py-3">
                     {showForm ? (
                       renderForm(r.form)
@@ -846,7 +855,7 @@ export default function LeaguePage() {
                         <span className="text-center font-semibold w-8">{r.draws}</span>
                         <span className="text-center font-semibold w-10">{r.ocp}</span>
                         {members.length >= 3 && <span className="text-center font-semibold w-8">{r.unicorns}</span>}
-                        <span className="text-center font-bold text-emerald-600 w-10">{r.mltPts}</span>
+                        <span className="text-center font-bold text-emerald-600 w-10 pr-2">{r.mltPts}</span>
                       </div>
                     )}
                   </div>
@@ -1190,7 +1199,7 @@ export default function LeaguePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className={`min-h-screen ${oldSchoolMode ? 'oldschool-theme' : 'bg-slate-50'}`}>
       <div className="max-w-6xl mx-auto px-4 pt-6 pb-16">
         {/* Header with back link */}
         <div className="mb-6">
@@ -1262,17 +1271,17 @@ export default function LeaguePage() {
               </div>
             )}
 
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
               <button
                 onClick={() => setShowInvite(true)}
-                className="px-3 py-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors text-sm font-medium"
+                className="px-2 sm:px-3 py-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors text-xs sm:text-sm font-medium"
                 title="Invite players"
               >
-                ➕ Invite
+                ➕ <span className="hidden sm:inline">Invite</span>
               </button>
               <button
                 onClick={shareLeague}
-                className="px-3 py-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors text-sm font-medium"
+                className="px-2 sm:px-3 py-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors text-xs sm:text-sm font-medium"
                 title="Share league code"
               >
                 <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1283,17 +1292,17 @@ export default function LeaguePage() {
                     d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
                   />
                 </svg>
-                Share
+                <span className="hidden sm:inline">Share</span>
               </button>
               <button
                 onClick={() => setShowLeaveConfirm(true)}
-                className="px-3 py-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
+                className="px-2 sm:px-3 py-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors text-xs sm:text-sm font-medium"
                 title="Leave league"
               >
                 <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Leave
+                <span className="hidden sm:inline">Leave</span>
               </button>
             </div>
           </div>
@@ -1301,11 +1310,11 @@ export default function LeaguePage() {
 
         {/* Tabs */}
         <div className="mt-6">
-          <div className="inline-flex rounded-lg bg-slate-100 p-1 shadow-sm">
+          <div className="flex rounded-lg bg-slate-100 p-1 shadow-sm gap-1">
             <button
               onClick={() => setTab("chat")}
               className={
-                "px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
+                "flex-1 px-3 sm:px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
                 (tab === "chat" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
@@ -1314,25 +1323,27 @@ export default function LeaguePage() {
             <button
               onClick={() => setTab("gwr")}
               className={
-                "px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
+                "flex-1 px-2 sm:px-4 py-3 rounded-md text-xs font-semibold transition-colors leading-tight " +
                 (tab === "gwr" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
-              {selectedGw ? `GW ${selectedGw} Results` : "GW Results"}
+              <span className="hidden sm:inline">{selectedGw ? `GW ${selectedGw} Results` : "GW Results"}</span>
+              <span className="sm:hidden whitespace-pre-line">{selectedGw ? `GW${selectedGw}\nResults` : "GW\nResults"}</span>
             </button>
             <button
               onClick={() => setTab("gw")}
               className={
-                "px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
+                "flex-1 px-2 sm:px-4 py-3 rounded-md text-xs font-semibold transition-colors leading-tight " +
                 (tab === "gw" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
-              {currentGw ? `GW ${currentGw} Picks` : "GW Picks"}
+              <span className="hidden sm:inline">{currentGw ? `GW ${currentGw} Predictions` : "GW Predictions"}</span>
+              <span className="sm:hidden whitespace-pre-line">{currentGw ? `GW${currentGw}\nPredictions` : "GW\nPredictions"}</span>
             </button>
             <button
               onClick={() => setTab("mlt")}
               className={
-                "px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
+                "flex-1 px-3 sm:px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
                 (tab === "mlt" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
@@ -1546,6 +1557,7 @@ export default function LeaguePage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

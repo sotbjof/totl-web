@@ -310,8 +310,8 @@ export default function GlobalLeaderboardPage() {
             <table className="w-full text-sm text-slate-800">
               <thead className="bg-slate-100">
                 <tr>
-                  <th className="px-2 py-3 text-left w-8 font-semibold">#</th>
-                  <th className="px-4 py-3 text-left font-semibold">Player</th>
+                  <th className="px-1 py-3 text-left w-6 font-semibold">#</th>
+                  <th className="px-4 py-3 text-left font-semibold text-xs">Player</th>
                   {activeTab === "overall" && (
                     <>
                       <th className="px-4 py-3 text-center font-semibold">GW{latestGw || '?'}</th>
@@ -379,7 +379,7 @@ export default function GlobalLeaderboardPage() {
                             {indicator}
                           </span>
                         )}
-                        <span className="align-middle font-bold">{r.name}</span>
+                        <span className="align-middle font-bold text-xs">{r.name}</span>
                         {isMe && (
                           <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                             you
