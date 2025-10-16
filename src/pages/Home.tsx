@@ -67,6 +67,14 @@ export default function HomePage() {
 
       const ls: League[] = (lm as any[])?.map((r) => r.leagues).filter(Boolean) ?? [];
 
+      // Get current GW from meta table (published/active GW)
+      const { data: meta } = await supabase
+        .from("meta")
+        .select("current_gw")
+        .eq("id", 1)
+        .maybeSingle();
+      const currentGw = (meta as any)?.current_gw ?? 1;
+
       // All fixtures ordered by GW then index
       const { data: fx } = await supabase
         .from("fixtures")
@@ -77,14 +85,6 @@ export default function HomePage() {
         .order("fixture_index");
 
       const fixturesList: Fixture[] = (fx as Fixture[]) ?? [];
-
-      // Determine current GW: show the latest GW that has fixtures
-      let currentGw: number;
-      if (fixturesList.length) {
-        currentGw = Math.max(...fixturesList.map(f => f.gw));
-      } else {
-        currentGw = 1;
-      }
       const thisGwFixtures = fixturesList.filter(f => f.gw === currentGw);
       setGw(currentGw);
 
@@ -130,39 +130,8 @@ export default function HomePage() {
         // ignore; leave lastScore/lastScoreGw as-is
       }
 
-      // Determine if next GW is coming soon. If fixtures exist for next GW and no results published yet, show the hint.
-      const nextGw = currentGw + 1;
-      const hasNextGwFixtures = fixturesList.some(f => f.gw === nextGw);
-      if (hasNextGwFixtures) {
-        let nextPublished = false;
-        try {
-          const { data: nextRs } = await supabase
-            .from("gw_results")
-            .select("gw")
-            .eq("gw", nextGw)
-            .limit(1);
-          nextPublished = Array.isArray(nextRs) && nextRs.length > 0;
-        } catch (_) { /* ignore */ }
-
-        // Fallback: treat as published if legacy `results` has any rows for those fixtures
-        if (!nextPublished) {
-          const nextIds = fixturesList.filter(f => f.gw === nextGw).map(f => f.id);
-          if (nextIds.length) {
-            try {
-              const { data: legacyNext } = await supabase
-                .from("results")
-                .select("id")
-                .in("fixture_id", nextIds)
-                .limit(1);
-              nextPublished = Array.isArray(legacyNext) && legacyNext.length > 0;
-            } catch (_) { /* ignore */ }
-          }
-        }
-
-        setNextGwComing(nextPublished ? null : nextGw);
-      } else {
-        setNextGwComing(null);
-      }
+      // Don't show "coming soon" message - only show current active GW
+      setNextGwComing(null);
 
       // Load this user's picks for that GW so we can show the dot under Home/Draw/Away
       let userPicks: PickRow[] = [];
