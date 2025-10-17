@@ -66,14 +66,13 @@ export default function PredictionsBanner() {
           const firstKickoff = new Date(fixtures[0].kickoff_time);
           const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000)); // 1h 15mins = 75 minutes
           
-          // Format deadline as readable date and time
-          const deadlineFormatted = deadlineTime.toLocaleDateString(undefined, { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
+          // Format deadline as readable date and time (GMT)
+          const weekday = deadlineTime.toLocaleDateString(undefined, { weekday: 'short' });
+          const month = deadlineTime.toLocaleDateString(undefined, { month: 'short' });
+          const day = deadlineTime.toLocaleDateString(undefined, { day: 'numeric' });
+          const hour = String(deadlineTime.getUTCHours()).padStart(2, '0');
+          const minute = String(deadlineTime.getUTCMinutes()).padStart(2, '0');
+          const deadlineFormatted = `${weekday}, ${month} ${day}, ${hour}:${minute}`;
           setDeadlineText(deadlineFormatted);
         } else {
           setDeadlineText(null);

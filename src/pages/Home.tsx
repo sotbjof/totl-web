@@ -729,11 +729,12 @@ export default function HomePage() {
                                   <img src={homeBadge} alt={`${homeName} badge`} className="h-6 w-6" />
                                   <div className="text-[15px] sm:text-base font-semibold text-slate-600">
                                     {f.kickoff_time
-                                      ? new Date(f.kickoff_time).toLocaleTimeString(undefined, {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                          hour12: false,
-                                        })
+                                      ? (() => {
+                                          const d = new Date(f.kickoff_time);
+                                          const hh = String(d.getUTCHours()).padStart(2, '0');
+                                          const mm = String(d.getUTCMinutes()).padStart(2, '0');
+                                          return `${hh}:${mm}`;
+                                        })()
                                       : ""}
                                   </div>
                                   <img src={awayBadge} alt={`${awayName} badge`} className="h-6 w-6" />
