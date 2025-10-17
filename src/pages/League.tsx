@@ -252,14 +252,23 @@ export default function LeaguePage() {
     if (!league) return { showGwResults: false, showGwPredictions: false };
     
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const leagueStartGw = specialLeagues.includes(league.name) ? 0 : (currentGw ?? 1);
+    const gw8StartLeagues = ['gregVjofVcarl'];
+    
+    let leagueStartGw: number;
+    if (specialLeagues.includes(league.name)) {
+      leagueStartGw = 0; // Show all results from GW0
+    } else if (gw8StartLeagues.includes(league.name)) {
+      leagueStartGw = 8; // Only show from GW8 onwards
+    } else {
+      leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
+    }
     
     // For GW Results: only show if there are results for the league's start gameweek or later
     const hasRelevantResults = availableGws.some(gw => gw >= leagueStartGw);
     const showGwResults = specialLeagues.includes(league.name) || hasRelevantResults;
     
     // For GW Predictions: only show if current GW is >= league start gameweek
-    const showGwPredictions = specialLeagues.includes(league.name) || (currentGw && currentGw >= leagueStartGw);
+    const showGwPredictions = specialLeagues.includes(league.name) || gw8StartLeagues.includes(league.name) || (currentGw && currentGw >= leagueStartGw);
     
     return { showGwResults, showGwPredictions };
   }, [league, currentGw, availableGws]);
@@ -687,7 +696,16 @@ export default function LeaguePage() {
       // Filter gameweeks to only include those from the league's start_gw onwards
       // Special leagues that should include all historical data (start from GW0)
       const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-      const leagueStartGw = specialLeagues.includes(league?.name || '') ? 0 : (currentGw ?? 1);
+      const gw8StartLeagues = ['gregVjofVcarl'];
+      
+      let leagueStartGw: number;
+      if (specialLeagues.includes(league?.name || '')) {
+        leagueStartGw = 0; // Show all results from GW0
+      } else if (gw8StartLeagues.includes(league?.name || '')) {
+        leagueStartGw = 8; // Only show from GW8 onwards
+      } else {
+        leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
+      }
       const relevantGws = gwsWithResults.filter(gw => gw >= leagueStartGw);
 
       // For late-starting leagues, if there are no results for the start gameweek or later, show empty table
@@ -850,7 +868,8 @@ export default function LeaguePage() {
 
     // Check if this is a late-starting league (not one of the special leagues that start from GW0)
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const isLateStartingLeague = league && !specialLeagues.includes(league.name);
+    const gw8StartLeagues = ['gregVjofVcarl'];
+    const isLateStartingLeague = league && !specialLeagues.includes(league.name) && !gw8StartLeagues.includes(league.name);
 
     const rows = mltRows.length
       ? mltRows
@@ -969,9 +988,18 @@ export default function LeaguePage() {
 
     // Check if this gameweek is relevant for this league
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const leagueStartGw = specialLeagues.includes(league?.name || '') ? 0 : (currentGw ?? 1);
+    const gw8StartLeagues = ['gregVjofVcarl'];
     
-    if (!specialLeagues.includes(league?.name || '') && picksGw <= leagueStartGw) {
+    let leagueStartGw: number;
+    if (specialLeagues.includes(league?.name || '')) {
+      leagueStartGw = 0; // Show all results from GW0
+    } else if (gw8StartLeagues.includes(league?.name || '')) {
+      leagueStartGw = 8; // Only show from GW8 onwards
+    } else {
+      leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
+    }
+    
+    if (!specialLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && picksGw <= leagueStartGw) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
           <div className="text-center">
@@ -1179,10 +1207,19 @@ export default function LeaguePage() {
 
     // Check if this gameweek is relevant for this league
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const leagueStartGw = specialLeagues.includes(league?.name || '') ? 0 : (currentGw ?? 1);
+    const gw8StartLeagues = ['gregVjofVcarl'];
+    
+    let leagueStartGw: number;
+    if (specialLeagues.includes(league?.name || '')) {
+      leagueStartGw = 0; // Show all results from GW0
+    } else if (gw8StartLeagues.includes(league?.name || '')) {
+      leagueStartGw = 8; // Only show from GW8 onwards
+    } else {
+      leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
+    }
     
     // For late-starting leagues, don't show results for gameweeks that ended before the league started
-    if (!specialLeagues.includes(league?.name || '') && resGw <= leagueStartGw) {
+    if (!specialLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && resGw <= leagueStartGw) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
           <div className="text-center">
