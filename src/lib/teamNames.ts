@@ -130,7 +130,7 @@ const CLUBS: Record<
   },
   'nottingham-forest': {
     medium: 'Forest',
-    slug: 'nottingham-forest',
+    slug: 'NFO',
     aliases: ['nottingham forest', 'forest', 'nfo', 'not'],
   },
   'southampton': {
