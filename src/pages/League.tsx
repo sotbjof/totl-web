@@ -252,7 +252,7 @@ export default function LeaguePage() {
     if (!league) return { showGwResults: false, showGwPredictions: false };
     
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const gw8StartLeagues = ['gregVjofVcarl'];
+    const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
     
     let leagueStartGw: number;
     if (specialLeagues.includes(league.name)) {
@@ -696,7 +696,7 @@ export default function LeaguePage() {
       // Filter gameweeks to only include those from the league's start_gw onwards
       // Special leagues that should include all historical data (start from GW0)
       const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-      const gw8StartLeagues = ['gregVjofVcarl'];
+      const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
       
       let leagueStartGw: number;
       if (specialLeagues.includes(league?.name || '')) {
@@ -868,7 +868,7 @@ export default function LeaguePage() {
 
     // Check if this is a late-starting league (not one of the special leagues that start from GW0)
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const gw8StartLeagues = ['gregVjofVcarl'];
+    const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
     const isLateStartingLeague = league && !specialLeagues.includes(league.name) && !gw8StartLeagues.includes(league.name);
 
     const rows = mltRows.length
@@ -988,7 +988,7 @@ export default function LeaguePage() {
 
     // Check if this gameweek is relevant for this league
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const gw8StartLeagues = ['gregVjofVcarl'];
+    const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
     
     let leagueStartGw: number;
     if (specialLeagues.includes(league?.name || '')) {
@@ -999,7 +999,7 @@ export default function LeaguePage() {
       leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
     }
     
-    if (!specialLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && picksGw <= leagueStartGw) {
+    if (!specialLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && picksGw < leagueStartGw) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
           <div className="text-center">
@@ -1207,7 +1207,7 @@ export default function LeaguePage() {
 
     // Check if this gameweek is relevant for this league
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const gw8StartLeagues = ['gregVjofVcarl'];
+    const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
     
     let leagueStartGw: number;
     if (specialLeagues.includes(league?.name || '')) {
@@ -1219,7 +1219,7 @@ export default function LeaguePage() {
     }
     
     // For late-starting leagues, don't show results for gameweeks that ended before the league started
-    if (!specialLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && resGw <= leagueStartGw) {
+    if (!specialLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && resGw < leagueStartGw) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
           <div className="text-center">
