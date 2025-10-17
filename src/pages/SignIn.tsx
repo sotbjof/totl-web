@@ -1,17 +1,87 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export default function SignIn() {
-  const [mode, setMode] = useState<'signup'|'signin'|'reset'>('signup');
+  const [mode, setMode] = useState<'signup'|'signin'|'reset'|'password-reset'>('signup');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showEmailMessage, setShowEmailMessage] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const nav = useNavigate();
+
+  // Check for password reset on page load
+  useEffect(() => {
+    const checkPasswordReset = async () => {
+      console.log('SignIn page loaded, checking for password reset...');
+      console.log('Current URL:', window.location.href);
+      console.log('Search params:', window.location.search);
+      console.log('Hash:', window.location.hash);
+      
+      // Check URL parameters for recovery type
+      const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      
+      const isRecovery = urlParams.get('type') === 'recovery' || 
+                        hashParams.get('type') === 'recovery' ||
+                        window.location.search.includes('type=recovery') ||
+                        window.location.hash.includes('type=recovery');
+      
+      console.log('Is recovery detected:', isRecovery);
+      
+      if (isRecovery) {
+        console.log('Setting password reset mode');
+        setMode('password-reset');
+        return;
+      }
+      
+      // Also check session for recovery
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Session:', session);
+      if (session?.user && (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'))) {
+        console.log('Session-based recovery detected');
+        setMode('password-reset');
+      }
+    };
+    checkPasswordReset();
+  }, []);
+
+  async function updatePassword() {
+    if (newPassword !== confirmPassword) {
+      setErr('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setErr('Password must be at least 6 characters');
+      return;
+    }
+
+    setErr(null);
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      setPasswordResetSuccess(true);
+      setTimeout(() => {
+        nav('/');
+      }, 2000);
+    } catch (e: any) {
+      setErr(e.message || 'Failed to update password');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function upsertProfile(userId: string, name?: string) {
     if (!userId) return;
@@ -145,6 +215,68 @@ export default function SignIn() {
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (passwordResetSuccess) {
+    return (
+      <div className="min-h-screen flex items-start justify-center bg-gray-50 p-6 pt-20">
+        <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow space-y-4">
+          <h1 className="text-xl font-bold text-center text-green-600">Password Updated!</h1>
+          <div className="text-center space-y-3">
+            <p className="text-slate-600">
+              Your password has been successfully updated.
+            </p>
+            <p className="text-sm text-slate-500">
+              Redirecting to home page...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'password-reset') {
+    return (
+      <div className="min-h-screen flex items-start justify-center bg-gray-50 p-6 pt-20">
+        <form onSubmit={(e) => { e.preventDefault(); updatePassword(); }} className="w-full max-w-md rounded-2xl border bg-white p-6 shadow space-y-4">
+          <h1 className="text-xl font-bold">Set New Password</h1>
+          
+          <div>
+            <label className="block text-sm font-medium">New Password</label>
+            <input
+              type="password"
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 6 characters"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Confirm Password</label>
+            <input
+              type="password"
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm your new password"
+              required
+            />
+          </div>
+
+          {err && <div className="text-sm text-red-600">{err}</div>}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-xl px-4 py-2 font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {busy ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
       </div>
     );
   }
