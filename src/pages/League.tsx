@@ -1136,7 +1136,9 @@ export default function LeaguePage() {
                             if (!iso) return "";
                             const d = new Date(iso);
                             if (isNaN(d.getTime())) return "";
-                            return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                            const hh = String(d.getUTCHours()).padStart(2, '0');
+                            const mm = String(d.getUTCMinutes()).padStart(2, '0');
+                            return `${hh}:${mm}`;
                           };
                           const timeStr = timeOf(f.kickoff_time);
 
