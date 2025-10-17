@@ -213,6 +213,7 @@ export default function LeaguePage() {
 
   // tabs: Chat / Mini League Table / GW Picks / GW Results
   const [tab, setTab] = useState<"chat" | "mlt" | "gw" | "gwr">("gwr");
+
   const [showForm, setShowForm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -245,6 +246,23 @@ export default function LeaguePage() {
     members.forEach((x) => m.set(x.id, x.name));
     return m;
   }, [members]);
+
+  // Determine which tabs should be visible for this league
+  const tabVisibility = useMemo(() => {
+    if (!league) return { showGwResults: false, showGwPredictions: false };
+    
+    const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+    const leagueStartGw = specialLeagues.includes(league.name) ? 0 : (currentGw ?? 1);
+    
+    // For GW Results: only show if there are results for the league's start gameweek or later
+    const hasRelevantResults = availableGws.some(gw => gw >= leagueStartGw);
+    const showGwResults = specialLeagues.includes(league.name) || hasRelevantResults;
+    
+    // For GW Predictions: only show if current GW is >= league start gameweek
+    const showGwPredictions = specialLeagues.includes(league.name) || (currentGw && currentGw >= leagueStartGw);
+    
+    return { showGwResults, showGwPredictions };
+  }, [league, currentGw, availableGws]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -353,6 +371,16 @@ export default function LeaguePage() {
       alive = false;
     };
   }, [code]);
+
+  /* ---------- Redirect to valid tab if current tab shouldn't be visible for this league ---------- */
+  useEffect(() => {
+    if (!league) return;
+    
+    // If user is on a tab that shouldn't be visible, redirect to Table tab
+    if ((tab === "gwr" && !tabVisibility.showGwResults) || (tab === "gw" && !tabVisibility.showGwPredictions)) {
+      setTab("mlt");
+    }
+  }, [league, tab, tabVisibility]);
 
   /* ---------- realtime chat: load + subscribe ---------- */
   useEffect(() => {
@@ -617,6 +645,12 @@ export default function LeaguePage() {
         setMltRows([]);
         return;
       }
+      
+      // Don't calculate until we have currentGw loaded
+      if (currentGw === null) {
+        return;
+      }
+      
       setMltLoading(true);
 
       const { data: rs } = await supabase.from("gw_results").select("gw,fixture_index,result");
@@ -650,16 +684,40 @@ export default function LeaguePage() {
         (a, b) => a - b
       );
 
+      // Filter gameweeks to only include those from the league's start_gw onwards
+      // Special leagues that should include all historical data (start from GW0)
+      const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+      const leagueStartGw = specialLeagues.includes(league?.name || '') ? 0 : (currentGw ?? 1);
+      const relevantGws = gwsWithResults.filter(gw => gw >= leagueStartGw);
+
+      // For late-starting leagues, if there are no results for the start gameweek or later, show empty table
+      if (!specialLeagues.includes(league?.name || '') && relevantGws.length === 0) {
+        setMltRows(
+          members.map((m) => ({
+            user_id: m.id,
+            name: m.name,
+            mltPts: 0,
+            ocp: 0,
+            unicorns: 0,
+            wins: 0,
+            draws: 0,
+            form: [],
+          }))
+        );
+        setMltLoading(false);
+        return;
+      }
+
       const { data: pk } = await supabase
         .from("picks")
         .select("user_id,gw,fixture_index,pick")
         .in("user_id", members.map((m) => m.id))
-        .in("gw", gwsWithResults);
+        .in("gw", relevantGws);
       const picksAll = (pk as PickRow[]) ?? [];
 
       type GwScore = { user_id: string; score: number; unicorns: number };
       const perGw = new Map<number, Map<string, GwScore>>();
-      gwsWithResults.forEach((g) => {
+      relevantGws.forEach((g) => {
         const map = new Map<string, GwScore>();
         members.forEach((m) => map.set(m.id, { user_id: m.id, score: 0, unicorns: 0 }));
         perGw.set(g, map);
@@ -790,6 +848,11 @@ export default function LeaguePage() {
       );
     };
 
+    // Check if this is a late-starting league (not one of the special leagues that start from GW0)
+    const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+    const isLateStartingLeague = league && !specialLeagues.includes(league.name);
+    const leagueStartGw = specialLeagues.includes(league?.name || '') ? 0 : (currentGw ?? 1);
+
     const rows = mltRows.length
       ? mltRows
       : members.map((m) => ({
@@ -834,7 +897,7 @@ export default function LeaguePage() {
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-center font-semibold w-8">W</span>
                       <span className="text-center font-semibold w-8">D</span>
-                      <span className="text-center font-semibold w-10">OCP</span>
+                      <span className="text-center font-semibold w-10">{isLateStartingLeague ? 'CP' : 'OCP'}</span>
                       {members.length >= 3 && <span className="text-center font-semibold w-8">🦄</span>}
                       <span className="text-center font-semibold w-10 pr-2">PTS</span>
                     </div>
@@ -870,7 +933,12 @@ export default function LeaguePage() {
           )}
         </div>
 
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex justify-between items-center">
+          {isLateStartingLeague && (
+            <div className="text-xs text-slate-500">
+              Correct predictions since this Mini League began.
+            </div>
+          )}
           <div className="inline-flex rounded-lg bg-slate-100 p-1 shadow-sm">
             <button
               onClick={() => setShowForm(false)}
@@ -899,6 +967,23 @@ export default function LeaguePage() {
     if (!picksGw) {
       return <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">No current game week available.</div>;
     }
+
+    // Check if this gameweek is relevant for this league
+    const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+    const leagueStartGw = specialLeagues.includes(league?.name || '') ? 0 : (currentGw ?? 1);
+    
+    if (!specialLeagues.includes(league?.name || '') && picksGw <= leagueStartGw) {
+      return (
+        <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
+          <div className="text-center">
+            <div className="text-lg font-semibold mb-2">No Predictions Available</div>
+            <div className="text-sm">This league started from GW{leagueStartGw} onwards.</div>
+            <div className="text-sm">GW{picksGw} predictions are not included in this league.</div>
+          </div>
+        </div>
+      );
+    }
+
     const outcomes = new Map<number, "H" | "D" | "A">();
     results.forEach((r) => {
       if (r.gw !== picksGw) return;
@@ -1092,6 +1177,23 @@ export default function LeaguePage() {
   function GwResultsTab() {
     const resGw = selectedGw;
     if (!resGw) return <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">No game week selected.</div>;
+
+    // Check if this gameweek is relevant for this league
+    const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+    const leagueStartGw = specialLeagues.includes(league?.name || '') ? 0 : (currentGw ?? 1);
+    
+    // For late-starting leagues, don't show results for gameweeks that ended before the league started
+    if (!specialLeagues.includes(league?.name || '') && resGw <= leagueStartGw) {
+      return (
+        <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
+          <div className="text-center">
+            <div className="text-lg font-semibold mb-2">No Results Available</div>
+            <div className="text-sm">This league started from GW{leagueStartGw} onwards.</div>
+            <div className="text-sm">GW{resGw} results are not included in this league.</div>
+          </div>
+        </div>
+      );
+    }
 
     const outcomes = new Map<number, "H" | "D" | "A">();
     results.forEach((r) => {
@@ -1320,26 +1422,32 @@ export default function LeaguePage() {
             >
               Chat
             </button>
-            <button
-              onClick={() => setTab("gwr")}
-              className={
-                "flex-1 px-2 sm:px-4 py-3 rounded-md text-xs font-semibold transition-colors leading-tight " +
-                (tab === "gwr" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
-              }
-            >
-              <span className="hidden sm:inline">{selectedGw ? `GW ${selectedGw} Results` : "GW Results"}</span>
-              <span className="sm:hidden whitespace-pre-line">{selectedGw ? `GW${selectedGw}\nResults` : "GW\nResults"}</span>
-            </button>
-            <button
-              onClick={() => setTab("gw")}
-              className={
-                "flex-1 px-2 sm:px-4 py-3 rounded-md text-xs font-semibold transition-colors leading-tight " +
-                (tab === "gw" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
-              }
-            >
-              <span className="hidden sm:inline">{currentGw ? `GW ${currentGw} Predictions` : "GW Predictions"}</span>
-              <span className="sm:hidden whitespace-pre-line">{currentGw ? `GW${currentGw}\nPredictions` : "GW\nPredictions"}</span>
-            </button>
+            {/* Only show GW Results tab for special leagues or if there are results for the league's start gameweek */}
+            {tabVisibility.showGwResults && (
+              <button
+                onClick={() => setTab("gwr")}
+                className={
+                  "flex-1 px-2 sm:px-4 py-3 rounded-md text-xs font-semibold transition-colors leading-tight " +
+                  (tab === "gwr" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+                }
+              >
+                <span className="hidden sm:inline">{selectedGw ? `GW ${selectedGw} Results` : "GW Results"}</span>
+                <span className="sm:hidden whitespace-pre-line">{selectedGw ? `GW${selectedGw}\nResults` : "GW\nResults"}</span>
+              </button>
+            )}
+            {/* Only show GW Predictions tab for special leagues or if current GW is >= league start */}
+            {tabVisibility.showGwPredictions && (
+              <button
+                onClick={() => setTab("gw")}
+                className={
+                  "flex-1 px-2 sm:px-4 py-3 rounded-md text-xs font-semibold transition-colors leading-tight " +
+                  (tab === "gw" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+                }
+              >
+                <span className="hidden sm:inline">{currentGw ? `GW ${currentGw} Predictions` : "GW Predictions"}</span>
+                <span className="sm:hidden whitespace-pre-line">{currentGw ? `GW${currentGw}\nPredictions` : "GW\nPredictions"}</span>
+              </button>
+            )}
             <button
               onClick={() => setTab("mlt")}
               className={
