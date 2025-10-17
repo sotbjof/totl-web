@@ -16,8 +16,33 @@ export default function AuthPage() {
   useEffect(() => {
     // Check if this is a password reset session
     const checkPasswordReset = async () => {
+      console.log('Auth page loaded, checking for password reset...');
+      console.log('Current URL:', window.location.href);
+      console.log('Search params:', window.location.search);
+      console.log('Hash:', window.location.hash);
+      
+      // Check URL parameters for recovery type
+      const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      
+      const isRecovery = urlParams.get('type') === 'recovery' || 
+                        hashParams.get('type') === 'recovery' ||
+                        window.location.search.includes('type=recovery') ||
+                        window.location.hash.includes('type=recovery');
+      
+      console.log('Is recovery detected:', isRecovery);
+      
+      if (isRecovery) {
+        console.log('Setting password reset mode');
+        setIsPasswordReset(true);
+        return;
+      }
+      
+      // Also check session for recovery
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user && window.location.hash.includes('type=recovery')) {
+      console.log('Session:', session);
+      if (session?.user && (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'))) {
+        console.log('Session-based recovery detected');
         setIsPasswordReset(true);
       }
     };
