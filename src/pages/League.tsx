@@ -851,7 +851,6 @@ export default function LeaguePage() {
     // Check if this is a late-starting league (not one of the special leagues that start from GW0)
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
     const isLateStartingLeague = league && !specialLeagues.includes(league.name);
-    const leagueStartGw = specialLeagues.includes(league?.name || '') ? 0 : (currentGw ?? 1);
 
     const rows = mltRows.length
       ? mltRows
