@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export default function SignIn() {
-  const [mode, setMode] = useState<'signup'|'signin'>('signup');
+  const [mode, setMode] = useState<'signup'|'signin'|'reset'>('signup');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showEmailMessage, setShowEmailMessage] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const nav = useNavigate();
 
   async function upsertProfile(userId: string, name?: string) {
@@ -19,6 +20,27 @@ export default function SignIn() {
     } else {
       // ensure a row exists even if name is empty
       await supabase.from('users').upsert({ id: userId });
+    }
+  }
+
+  async function resetPassword() {
+    if (!email.trim()) {
+      setErr('Please enter your email address');
+      return;
+    }
+    
+    setErr(null);
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) throw error;
+      setResetEmailSent(true);
+    } catch (e: any) {
+      setErr(e?.message || 'Failed to send reset email');
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -100,10 +122,39 @@ export default function SignIn() {
     );
   }
 
+  if (resetEmailSent) {
+    return (
+      <div className="min-h-screen flex items-start justify-center bg-gray-50 p-6 pt-20">
+        <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow space-y-4">
+          <h1 className="text-xl font-bold text-center">Check Your Email</h1>
+          <div className="text-center space-y-3">
+            <p className="text-slate-600">
+              We've sent a password reset link to <strong>{email}</strong>
+            </p>
+            <p className="text-sm text-slate-500">
+              Click the link in your email to reset your password.
+            </p>
+            <button
+              onClick={() => {
+                setResetEmailSent(false);
+                setMode('signin');
+              }}
+              className="mt-4 px-4 py-2 text-sm text-emerald-600 hover:text-emerald-700 underline"
+            >
+              Back to sign in
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-start justify-center bg-gray-50 p-6 pt-20">
-      <form onSubmit={onSubmit} className="w-full max-w-md rounded-2xl border bg-white p-6 shadow space-y-4">
-        <h1 className="text-xl font-bold">{mode === 'signup' ? 'Create your account' : 'Sign in'}</h1>
+      <form onSubmit={mode === 'reset' ? (e) => { e.preventDefault(); resetPassword(); } : onSubmit} className="w-full max-w-md rounded-2xl border bg-white p-6 shadow space-y-4">
+        <h1 className="text-xl font-bold">
+          {mode === 'signup' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Sign in'}
+        </h1>
 
         {mode === 'signup' && (
           <div>
@@ -130,17 +181,19 @@ export default function SignIn() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium">Password</label>
-          <input
-            type="password"
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
-            required
-          />
-        </div>
+        {mode !== 'reset' && (
+          <div>
+            <label className="block text-sm font-medium">Password</label>
+            <input
+              type="password"
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 6 characters"
+              required
+            />
+          </div>
+        )}
 
         {err && <div className="text-sm text-red-600">{err}</div>}
 
@@ -149,7 +202,11 @@ export default function SignIn() {
           disabled={busy}
           className="w-full rounded-xl px-4 py-2 font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
         >
-          {busy ? (mode === 'signup' ? 'Creating…' : 'Signing in…') : (mode === 'signup' ? 'Create account' : 'Sign in')}
+          {busy ? (
+            mode === 'signup' ? 'Creating…' : mode === 'reset' ? 'Sending…' : 'Signing in…'
+          ) : (
+            mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Send reset link' : 'Sign in'
+          )}
         </button>
 
         <div className="text-xs text-slate-500">
@@ -157,9 +214,20 @@ export default function SignIn() {
             <>Already have an account?{' '}
               <button type="button" onClick={() => setMode('signin')} className="underline">Sign in</button>
             </>
+          ) : mode === 'reset' ? (
+            <>Remember your password?{' '}
+              <button type="button" onClick={() => setMode('signin')} className="underline">Sign in</button>
+            </>
           ) : (
-            <>New here?{' '}
-              <button type="button" onClick={() => setMode('signup')} className="underline">Create an account</button>
+            <>
+              <div className="mb-2">
+                New here?{' '}
+                <button type="button" onClick={() => setMode('signup')} className="underline">Create an account</button>
+              </div>
+              <div>
+                Forgot your password?{' '}
+                <button type="button" onClick={() => setMode('reset')} className="underline">Reset it</button>
+              </div>
             </>
           )}
         </div>
