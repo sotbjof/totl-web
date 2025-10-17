@@ -358,13 +358,12 @@ export default function PredictionsPage() {
       const now = new Date();
       
       if (now > deadlineTime) {
-        const deadlineFormatted = deadlineTime.toLocaleDateString(undefined, { 
-          weekday: 'short', 
-          month: 'short', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+        const weekday = deadlineTime.toLocaleDateString(undefined, { weekday: 'short' });
+        const month = deadlineTime.toLocaleDateString(undefined, { month: 'short' });
+        const day = deadlineTime.toLocaleDateString(undefined, { day: 'numeric' });
+        const hour = String(deadlineTime.getUTCHours()).padStart(2, '0');
+        const minute = String(deadlineTime.getUTCMinutes()).padStart(2, '0');
+        const deadlineFormatted = `${weekday}, ${month} ${day}, ${hour}:${minute}`;
         setError(`⚠️ Too late! Submissions closed at ${deadlineFormatted}. The deadline was 75 minutes before the first kickoff.`);
         return;
       }
@@ -384,13 +383,12 @@ export default function PredictionsPage() {
       const now = new Date();
       
       if (now > deadlineTime) {
-        const deadlineFormatted = deadlineTime.toLocaleDateString(undefined, { 
-          weekday: 'short', 
-          month: 'short', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+        const weekday = deadlineTime.toLocaleDateString(undefined, { weekday: 'short' });
+        const month = deadlineTime.toLocaleDateString(undefined, { month: 'short' });
+        const day = deadlineTime.toLocaleDateString(undefined, { day: 'numeric' });
+        const hour = String(deadlineTime.getUTCHours()).padStart(2, '0');
+        const minute = String(deadlineTime.getUTCMinutes()).padStart(2, '0');
+        const deadlineFormatted = `${weekday}, ${month} ${day}, ${hour}:${minute}`;
         setError(`⚠️ Too late! Submissions closed at ${deadlineFormatted}. The deadline was 75 minutes before the first kickoff.`);
         setShowSubmitConfirm(false);
         return;
@@ -771,9 +769,8 @@ function fmtDayHeading(d: Date) {
 }
 
 function fmtKickoffTime(d: Date) {
-  // e.g. "13:00"
-  return d.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  // e.g. "13:00" (GMT)
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
 }
