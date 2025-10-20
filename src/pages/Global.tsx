@@ -380,8 +380,8 @@ export default function GlobalLeaderboardPage() {
 
                   // Check if this rank has multiple players
                   const currentRank = 'rank' in r ? r.rank : i + 1;
-                  const rankCount = arr.filter(item => {
-                    const itemRank = 'rank' in item ? item.rank : arr.indexOf(item) + 1;
+                  const rankCount = arr.filter((item, index) => {
+                    const itemRank = 'rank' in item ? item.rank : index + 1;
                     return itemRank === currentRank;
                   }).length;
                   const isTied = rankCount > 1;
