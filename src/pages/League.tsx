@@ -96,8 +96,8 @@ function Chip({
   return (
     <span
       className={[
-        "inline-flex items-center justify-center h-5 min-w-[20px] px-1.5",
-        "rounded-full border text-xs font-semibold mr-1 mb-0.5",
+        "inline-flex items-center justify-center h-5 min-w-[18px] px-1.5",
+        "rounded-full border text-[11px] font-semibold mb-0.5",
         "align-middle",
         tone,
       ].join(" ")}
@@ -252,11 +252,14 @@ export default function LeaguePage() {
     if (!league) return { showGwResults: false, showGwPredictions: false };
     
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+    const gw7StartLeagues = ['The Bird league'];
     const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
     
     let leagueStartGw: number;
     if (specialLeagues.includes(league.name)) {
       leagueStartGw = 0; // Show all results from GW0
+    } else if (gw7StartLeagues.includes(league.name)) {
+      leagueStartGw = 7; // Only show from GW7 onwards
     } else if (gw8StartLeagues.includes(league.name)) {
       leagueStartGw = 8; // Only show from GW8 onwards
     } else {
@@ -268,7 +271,7 @@ export default function LeaguePage() {
     const showGwResults = specialLeagues.includes(league.name) || hasRelevantResults;
     
     // For GW Predictions: only show if current GW is >= league start gameweek
-    const showGwPredictions = specialLeagues.includes(league.name) || gw8StartLeagues.includes(league.name) || (currentGw && currentGw >= leagueStartGw);
+    const showGwPredictions = specialLeagues.includes(league.name) || gw7StartLeagues.includes(league.name) || gw8StartLeagues.includes(league.name) || (currentGw && currentGw >= leagueStartGw);
     
     return { showGwResults, showGwPredictions };
   }, [league, currentGw, availableGws]);
@@ -696,11 +699,14 @@ export default function LeaguePage() {
       // Filter gameweeks to only include those from the league's start_gw onwards
       // Special leagues that should include all historical data (start from GW0)
       const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+      const gw7StartLeagues = ['The Bird league'];
       const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
       
       let leagueStartGw: number;
       if (specialLeagues.includes(league?.name || '')) {
         leagueStartGw = 0; // Show all results from GW0
+      } else if (gw7StartLeagues.includes(league?.name || '')) {
+        leagueStartGw = 7; // Only show from GW7 onwards
       } else if (gw8StartLeagues.includes(league?.name || '')) {
         leagueStartGw = 8; // Only show from GW8 onwards
       } else {
@@ -709,7 +715,7 @@ export default function LeaguePage() {
       const relevantGws = gwsWithResults.filter(gw => gw >= leagueStartGw);
 
       // For late-starting leagues, if there are no results for the start gameweek or later, show empty table
-      if (!specialLeagues.includes(league?.name || '') && relevantGws.length === 0) {
+      if (!specialLeagues.includes(league?.name || '') && !gw7StartLeagues.includes(league?.name || '') && relevantGws.length === 0) {
         setMltRows(
           members.map((m) => ({
             user_id: m.id,
@@ -868,8 +874,9 @@ export default function LeaguePage() {
 
     // Check if this is a late-starting league (not one of the special leagues that start from GW0)
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+    const gw7StartLeagues = ['The Bird league'];
     const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
-    const isLateStartingLeague = league && !specialLeagues.includes(league.name) && !gw8StartLeagues.includes(league.name);
+    const isLateStartingLeague = league && !specialLeagues.includes(league.name) && !gw7StartLeagues.includes(league.name) && !gw8StartLeagues.includes(league.name);
 
     const rows = mltRows.length
       ? mltRows
@@ -988,18 +995,21 @@ export default function LeaguePage() {
 
     // Check if this gameweek is relevant for this league
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+    const gw7StartLeagues = ['The Bird league'];
     const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
     
     let leagueStartGw: number;
     if (specialLeagues.includes(league?.name || '')) {
       leagueStartGw = 0; // Show all results from GW0
+    } else if (gw7StartLeagues.includes(league?.name || '')) {
+      leagueStartGw = 7; // Only show from GW7 onwards
     } else if (gw8StartLeagues.includes(league?.name || '')) {
       leagueStartGw = 8; // Only show from GW8 onwards
     } else {
       leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
     }
     
-    if (!specialLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && picksGw < leagueStartGw) {
+    if (!specialLeagues.includes(league?.name || '') && !gw7StartLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && picksGw < leagueStartGw) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
           <div className="text-center">
@@ -1112,25 +1122,18 @@ export default function LeaguePage() {
             </div>
           </div>
         ) : (
-          <div className="mt-3 space-y-8">
+          <div className="mt-3 space-y-6">
             {sections.map((sec, si) => (
               <div key={si}>
-                <div className="text-slate-600 font-bold mb-4 text-lg">{sec.label}</div>
-                <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50">
-                      <tr className="text-xs font-semibold text-slate-600">
-                        <th className="text-center px-4 py-4 w-[32%]">Fixture</th>
-                        <th className="text-center px-3 py-4 w-[22%] border-l border-slate-200">Home</th>
-                        <th className="text-center px-3 py-4 w-[23%] border-l border-slate-200">Draw</th>
-                        <th className="text-center px-3 py-4 w-[23%] border-l border-slate-200">Away</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sec.items.map((f) => {
+                <div className="text-slate-700 font-semibold text-lg mb-3">{sec.label}</div>
+                <div className="rounded-2xl border bg-slate-50 overflow-hidden">
+                  <ul>
+                    {sec.items.map((f, idx) => {
                         try {
                           const homeName = f.home_name || f.home_team || "Home";
                           const awayName = f.away_name || f.away_team || "Away";
+                          const homeCode = f.home_code || "";
+                          const awayCode = f.away_code || "";
 
                           const timeOf = (iso?: string | null) => {
                             if (!iso) return "";
@@ -1145,54 +1148,99 @@ export default function LeaguePage() {
                           const fxIdx = f.fixture_index;
                           const these = picksByFixture.get(fxIdx) ?? [];
 
-                          const toChips = (want: "H" | "D" | "A") =>
-                            these
-                              .filter((p) => p.pick === want)
-                              .map((p) => {
-                                const m = members.find((mm) => mm.id === p.user_id);
-                                const letter = initials(m?.name ?? "?");
-                                const actualResult = outcomes.get(fxIdx);
-                                const isCorrect = actualResult === want;
-                                return <Chip key={p.user_id} letter={letter} correct={actualResult ? isCorrect : null} unicorn={false} />;
-                              });
+                          const toChips = (want: "H" | "D" | "A") => {
+                            const filtered = these.filter((p) => p.pick === want);
+                            const allPicked = these.length === members.length && filtered.length === members.length;
+                            const actualResult = outcomes.get(fxIdx);
+                            
+                            return filtered.map((p, idx) => {
+                              const m = members.find((mm) => mm.id === p.user_id);
+                              const letter = initials(m?.name ?? "?");
+                              const isCorrect = actualResult ? actualResult === want : null;
+                              
+                              if (allPicked) {
+                                // Stack effect - use relative positioning with negative margins
+                                const overlapAmount = 10;
+                                return (
+                                  <span 
+                                    key={p.user_id}
+                                    className="inline-block"
+                                    style={{
+                                      marginLeft: idx > 0 ? `-${overlapAmount}px` : '0',
+                                      position: 'relative',
+                                      zIndex: idx
+                                    }}
+                                  >
+                                    <Chip letter={letter} correct={isCorrect} unicorn={false} />
+                                  </span>
+                                );
+                              }
+                              
+                              return (
+                                <Chip key={p.user_id} letter={letter} correct={isCorrect} unicorn={false} />
+                              );
+                            });
+                          };
+
+                          const homeBadge = `/assets/badges/${homeCode.toUpperCase()}.png`;
+                          const awayBadge = `/assets/badges/${awayCode.toUpperCase()}.png`;
 
                           return (
-                            <tr key={`${f.gw}-${f.fixture_index}`} className="border-b border-slate-200">
-                              <td className="px-4 py-3 text-slate-900 font-bold border-r border-slate-200">
-                                <div>
-                                  <div>{homeName} v {awayName}</div>
-                                  {timeStr && <div className="text-xs text-slate-500 mt-1">{timeStr}</div>}
+                            <li key={`${f.gw}-${f.fixture_index}`} className={idx > 0 ? "border-t" : ""}>
+                              <div className="p-4 bg-white">
+                                {/* Fixture display - same as Home Page */}
+                                <div className="grid grid-cols-3 items-center">
+                                  <div className="flex items-center justify-center">
+                                    <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{homeName}</span>
+                                  </div>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <img src={homeBadge} alt={`${homeName} badge`} className="h-6 w-6" />
+                                    <div className="text-[15px] sm:text-base font-semibold text-slate-600">
+                                      {timeStr}
+                                    </div>
+                                    <img src={awayBadge} alt={`${awayName} badge`} className="h-6 w-6" />
+                                  </div>
+                                  <div className="flex items-center justify-center">
+                                    <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{awayName}</span>
+                                  </div>
                                 </div>
-                              </td>
-                              <td className="px-4 py-3 bg-emerald-50/30 border-r border-slate-200">
-                                <div className="flex flex-wrap gap-1 justify-center">{toChips("H")}</div>
-                              </td>
-                              <td className="px-4 py-3 bg-slate-50/50 border-r border-slate-200">
-                                <div className="flex flex-wrap gap-1 justify-center">{toChips("D")}</div>
-                              </td>
-                              <td className="px-4 py-3 bg-blue-50/30">
-                                <div className="flex flex-wrap gap-1 justify-center">{toChips("A")}</div>
-                              </td>
-                            </tr>
+                                
+                                {/* Pips underneath - same as Home Page */}
+                                <div className="mt-2 grid grid-cols-3">
+                                  <div className="relative h-6">
+                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5">
+                                      {toChips("H")}
+                                    </div>
+                                  </div>
+                                  <div className="relative h-6">
+                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5">
+                                      {toChips("D")}
+                                    </div>
+                                  </div>
+                                  <div className="relative h-6">
+                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5">
+                                      {toChips("A")}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </li>
                           );
                         } catch (error) {
                           console.error("Error rendering fixture:", error, f);
                           return (
-                            <tr key={`${f.gw}-${f.fixture_index}`}>
-                              <td className="px-4 py-3 text-red-500" colSpan={4}>Error loading fixture: {f.fixture_index}</td>
-                            </tr>
+                            <li key={`${f.gw}-${f.fixture_index}`} className="p-4 text-red-500">
+                              Error loading fixture: {f.fixture_index}
+                            </li>
                           );
                         }
                       })}
                       {!sec.items.length && (
-                        <tr>
-                          <td className="px-3 py-4 text-slate-500" colSpan={4}>
-                            No fixtures.
-                          </td>
-                        </tr>
+                        <li className="p-4 text-slate-500">
+                          No fixtures.
+                        </li>
                       )}
-                    </tbody>
-                  </table>
+                  </ul>
                 </div>
               </div>
             ))}
@@ -1209,11 +1257,14 @@ export default function LeaguePage() {
 
     // Check if this gameweek is relevant for this league
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+    const gw7StartLeagues = ['The Bird league'];
     const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
     
     let leagueStartGw: number;
     if (specialLeagues.includes(league?.name || '')) {
       leagueStartGw = 0; // Show all results from GW0
+    } else if (gw7StartLeagues.includes(league?.name || '')) {
+      leagueStartGw = 7; // Only show from GW7 onwards
     } else if (gw8StartLeagues.includes(league?.name || '')) {
       leagueStartGw = 8; // Only show from GW8 onwards
     } else {
@@ -1221,7 +1272,7 @@ export default function LeaguePage() {
     }
     
     // For late-starting leagues, don't show results for gameweeks that ended before the league started
-    if (!specialLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && resGw < leagueStartGw) {
+    if (!specialLeagues.includes(league?.name || '') && !gw7StartLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && resGw < leagueStartGw) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
           <div className="text-center">

@@ -322,6 +322,38 @@ export default function HomePage() {
             if (idx !== -1) {
               console.log('Using v_ocp_overall (same as Global page):', idx + 1, 'from', ocp.length, 'players');
               setGlobalRank(idx + 1);
+              
+              // Also calculate previous rank (before latest GW)
+              // We need to fetch gw_points to calculate previous rank
+              try {
+                const { data: gwPointsData } = await supabase
+                  .from("v_gw_points")
+                  .select("user_id, gw, points");
+                
+                if (gwPointsData && gwPointsData.length > 0) {
+                  const latestGw = Math.max(...gwPointsData.map((r: any) => r.gw));
+                  
+                  // Calculate previous OCP (excluding latest GW)
+                  const prevOcp = new Map<string, number>();
+                  gwPointsData.forEach((r: any) => {
+                    if (r.gw < latestGw) {
+                      prevOcp.set(r.user_id, (prevOcp.get(r.user_id) || 0) + (r.points || 0));
+                    }
+                  });
+                  
+                  // Sort by previous OCP
+                  const prevOrdered = Array.from(prevOcp.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+                  const prevIdx = prevOrdered.findIndex(([uid]) => uid === user?.id);
+                  
+                  if (prevIdx !== -1) {
+                    console.log('Previous rank from v_gw_points:', prevIdx + 1);
+                    if (alive) setPrevGlobalRank(prevIdx + 1);
+                  }
+                }
+              } catch (e) {
+                console.log('Could not calculate previous rank:', e);
+              }
+              
               return; // done
             }
           }
@@ -377,18 +409,27 @@ export default function HomePage() {
             }
 
             // Calculate previous rank if we have previous scores
+            console.log('Previous scores debug:', {
+              prevScoresSize: prevScores.size,
+              latestGw,
+              hasUserInPrevScores: prevScores.has(user?.id ?? ""),
+              userPrevScore: prevScores.get(user?.id ?? "")
+            });
+            
             if (prevScores.size > 0) {
               const prevOrdered = Array.from(prevScores.entries()).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
               const prevMyIndex = prevOrdered.findIndex(([uid]) => uid === user?.id);
+              console.log('Previous rank calculation:', {
+                prevMyIndex,
+                prevRank: prevMyIndex !== -1 ? prevMyIndex + 1 : 'not found',
+                prevScore: prevScores.get(user?.id ?? ""),
+                prevOrdered: prevOrdered.slice(0, 5).map(([uid, score]) => ({ uid: uid.slice(0, 8), score }))
+              });
               if (alive && prevMyIndex !== -1) {
-                console.log('Previous rank calculation (Global page logic):', {
-                  prevMyIndex,
-                  prevRank: prevMyIndex + 1,
-                  prevScore: prevScores.get(user?.id ?? ""),
-                  prevOrdered: prevOrdered.slice(0, 5).map(([uid, score]) => ({ uid: uid.slice(0, 8), score }))
-                });
                 setPrevGlobalRank(prevMyIndex + 1);
               }
+            } else {
+              console.log('No previous scores found - prevScores is empty');
             }
           }
         } catch (_) { /* ignore */ }
@@ -497,21 +538,27 @@ export default function HomePage() {
   const LeaderCard: React.FC<{
     title: string;
     icon: React.ReactNode;
+    subtitle?: React.ReactNode;
     footerLeft?: React.ReactNode;
     footerRight?: React.ReactNode;
     className?: string;
     to?: string;
     compactFooter?: boolean;
-  }> = ({ title, icon, footerLeft, footerRight, className, to, compactFooter }) => {
+  }> = ({ title, icon, subtitle, footerLeft, footerRight, className, to, compactFooter }) => {
     const inner = (
       <div className={"h-full rounded-3xl border-2 border-emerald-200 bg-emerald-50/50 p-4 sm:p-6 " + (className ?? "")}>
-        <div className="flex items-center gap-3">
-          <div className={"rounded-full bg-white shadow-inner flex items-center justify-center text-2xl " + (compactFooter ? "h-12 w-12 sm:h-14 sm:w-14" : "h-14 w-14 sm:h-16 sm:w-16")}>
+        <div className="flex items-start gap-3">
+          <div className={"rounded-full bg-white shadow-inner flex items-center justify-center flex-shrink-0 " + (compactFooter ? "h-12 w-12 sm:h-14 sm:w-14" : "h-14 w-14 sm:h-16 sm:w-16")}>
             {icon}
           </div>
         </div>
-        <div className="mt-3">
-          <div className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">{title}</div>
+        <div className="mt-2">
+          <div className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 whitespace-nowrap">{title}</div>
+          {subtitle && (
+            <div className="text-sm font-bold text-emerald-600 mt-1">
+              {subtitle}
+            </div>
+          )}
         </div>
         {(footerLeft || footerRight) && (
           <div className="mt-3 flex items-center gap-3 text-emerald-700">
@@ -542,7 +589,7 @@ export default function HomePage() {
   const GWCard: React.FC<{ gw: number; score: number | null; submitted: boolean; }> = ({ gw, score, submitted }) => {
     const display = score !== null ? score : (submitted ? 0 : NaN);
     return (
-      <div className="h-full rounded-3xl border-2 border-emerald-200 bg-emerald-50/50 p-4 sm:p-6 relative">
+      <div className="h-full rounded-3xl border-2 border-emerald-200 bg-emerald-50/50 p-4 sm:p-6 relative flex items-center justify-center">
         {/* Corner badges */}
         <div className="absolute top-4 left-4 text-emerald-700 text-sm sm:text-base font-semibold">
           GW{gw}
@@ -551,11 +598,11 @@ export default function HomePage() {
           Last week's score
         </div>
         {/* Big score */}
-        <div className="mt-2 flex items-center justify-center h-24 sm:h-28">
+        <div>
           {Number.isNaN(display) ? (
-            <span className="text-5xl sm:text-6xl font-extrabold text-slate-900">—</span>
+            <span className="text-5xl sm:text-6xl text-slate-900">—</span>
           ) : (
-            <span className="text-5xl sm:text-6xl font-extrabold text-slate-900">{display}</span>
+            <span className="text-5xl sm:text-6xl text-slate-900">{display}</span>
           )}
         </div>
       </div>
@@ -570,25 +617,37 @@ export default function HomePage() {
           <LeaderCard
             to="/global"
             title="TotL Global"
-            icon={<span role="img" aria-label="trophy">🏆</span>}
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-emerald-600">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
+              </svg>
+            }
+            subtitle={
+              globalRank !== null && globalCount !== null && globalCount > 0 ? (
+                <>Top {Math.round((globalRank / globalCount) * 100)}%</>
+              ) : null
+            }
             compactFooter
             footerLeft={
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 <span>👥</span>
                 <span className="font-semibold">{globalCount ?? "—"}</span>
-        {(() => {
-          if (globalRank === null || prevGlobalRank === null) {
-            return <span className="ml-1">—</span>;
-          }
-          if (globalRank < prevGlobalRank) {
-            return <span className="ml-1">⬆️</span>; // Moved up (better rank = lower number)
-          } else if (globalRank > prevGlobalRank) {
-            return <span className="ml-1">⬇️</span>; // Moved down (worse rank = higher number)
-          } else {
-            return <span className="ml-1">→</span>; // Same position
-          }
-        })()}
-                <span className="font-semibold">{globalRank ?? "—"}</span>
+                <div className="flex items-center gap-1">
+                  {(() => {
+                    console.log('Rank indicator debug:', { globalRank, prevGlobalRank });
+                    if (globalRank !== null && prevGlobalRank !== null) {
+                      if (globalRank < prevGlobalRank) {
+                        return <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white text-xs font-bold">▲</span>;
+                      } else if (globalRank > prevGlobalRank) {
+                        return <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-xs font-bold">▼</span>;
+                      } else {
+                        return <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-500 text-white text-xs font-bold">→</span>;
+                      }
+                    }
+                    return null;
+                  })()}
+                  <span className="font-semibold">{globalRank ?? "—"}</span>
+                </div>
               </div>
             }
           />
@@ -597,11 +656,21 @@ export default function HomePage() {
       </Section>
 
       {/* Mini Leagues */}
-      <section className="mt-12">
-        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-          MiniLeagues
-        </h2>
-        <div className="mt-3">
+      <section className="mt-8">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+            Mini Leagues
+          </h2>
+          {leagues.length > 4 && (
+            <Link
+              to="/tables"
+              className="text-emerald-600 font-semibold text-sm hover:text-emerald-700 no-underline"
+            >
+              Show All
+            </Link>
+          )}
+        </div>
+        <div>
           {loading ? (
             <div className="p-4 text-slate-500">Loading…</div>
           ) : leagues.length === 0 ? (
@@ -615,53 +684,62 @@ export default function HomePage() {
               </Link>
             </div>
           ) : (
-            <div className="rounded-2xl border bg-slate-50 overflow-hidden">
-              <ul>
-                {leagues.map((l, idx) => {
-                  const unread = unreadByLeague?.[l.id] ?? 0;
-                  const badge = unread > 0 ? Math.min(unread, 99) : 0;
-                  const rowBorder = idx ? "border-t" : "";
+            <div className="overflow-x-auto -mr-4 scrollbar-hide snap-x snap-mandatory">
+              <div className="flex gap-3 pb-2 pr-4" style={{ width: 'max-content' }}>
+                {Array.from({ length: Math.ceil(leagues.length / 4) }).map((_, pageIdx) => {
+                  const startIdx = pageIdx * 4;
+                  const pageLeagues = leagues.slice(startIdx, startIdx + 4);
                   return (
-                    <li key={l.id} className={rowBorder}>
-                      <Link
-                        to={`/league/${l.code}`}
-                        className="block p-4 bg-white hover:bg-emerald-50 transition-colors no-underline"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-lg font-semibold text-slate-900">
-                              {l.name}
+                    <div key={pageIdx} className="snap-start" style={{ width: 'calc(100vw - 6rem)' }}>
+                      <div className="flex flex-col gap-3">
+                        {pageLeagues.map((l) => {
+                          const unread = unreadByLeague?.[l.id] ?? 0;
+                          const badge = unread > 0 ? Math.min(unread, 99) : 0;
+                          return (
+                            <div key={l.id} className="rounded-xl border bg-slate-50 overflow-hidden">
+                              <Link
+                                to={`/league/${l.code}`}
+                                className="block p-3 bg-white hover:bg-emerald-50 transition-colors no-underline"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-base font-semibold text-slate-900 truncate">
+                                      {l.name}
+                                    </div>
+                                    {leagueSubmissions[l.id] && (
+                                      <div className="text-xs text-emerald-600 font-bold mt-0.5">
+                                        All Submitted
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    {badge > 0 && (
+                                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-600 text-white text-xs font-bold">
+                                        {badge}
+                                      </span>
+                                    )}
+                                    <div className="px-2 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-md hover:bg-slate-200 transition-colors">
+                                      View
+                                    </div>
+                                  </div>
+                                </div>
+                              </Link>
                             </div>
-                            {leagueSubmissions[l.id] && (
-                              <div className="text-sm text-emerald-600 font-bold mt-1">
-                                All Submitted
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {badge > 0 && (
-                              <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-emerald-600 text-white text-sm font-bold">
-                                {badge}
-                              </span>
-                            )}
-                            <div className="px-3 py-1 bg-slate-100 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-200 transition-colors">
-                              View
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
+                          );
+                        })}
+                      </div>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             </div>
           )}
         </div>
       </section>
 
       {/* Games (first GW) */}
-      <section className="mt-12">
-        <div className="flex items-center justify-between">
+      <section className="mt-8">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
             Games
           </h2>
@@ -671,7 +749,7 @@ export default function HomePage() {
             </div>
           )}
         </div>
-        <div className="text-slate-700 font-semibold text-lg mt-4 mb-0">
+        <div className="text-slate-700 font-semibold text-lg mt-2 mb-0">
           <div className="flex justify-between items-center">
             <span>Game Week {gw}</span>
           </div>
@@ -702,10 +780,10 @@ export default function HomePage() {
               });
               const days = Object.keys(grouped);
               let idx = 0;
-              return days.map((day) => (
+              return days.map((day, dayIdx) => (
                 <div key={day}>
-                  <div className="mt-6 mb-3 text-slate-700 font-semibold text-lg">{day}</div>
-                  <div className="rounded-2xl border bg-slate-50 overflow-hidden mb-6">
+                  <div className={`${dayIdx === 0 ? 'mt-3' : 'mt-6'} mb-2 text-slate-700 font-semibold text-lg`}>{day}</div>
+                  <div className="rounded-2xl border bg-slate-50 overflow-hidden mb-4">
                     <ul>
                       {grouped[day].map((f) => {
                         const pick = picksMap[f.fixture_index];
@@ -721,8 +799,8 @@ export default function HomePage() {
                         return (
                           <li key={f.id} className={liClass}>
                             <div className="p-4 bg-white">
-                              <div className="grid grid-cols-3 items-center gap-2">
-                                <div className="flex items-center justify-center pr-1">
+                              <div className="grid grid-cols-3 items-center">
+                                <div className="flex items-center justify-center">
                                   <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{homeName}</span>
                                 </div>
                                 <div className="flex items-center justify-center gap-2">
@@ -739,38 +817,44 @@ export default function HomePage() {
                                   </div>
                                   <img src={awayBadge} alt={`${awayName} badge`} className="h-6 w-6" />
                                 </div>
-                                <div className="flex items-center justify-center pl-1">
+                                <div className="flex items-center justify-center">
                                   <span className="text-sm sm:text-base font-medium text-slate-900 truncate">{awayName}</span>
                                 </div>
                               </div>
                               {/* Row: dots under H/D/A, always centered in each third */}
-                              <div className="mt-3 grid grid-cols-3 items-center">
-                                <div className="flex justify-center">
-                                  {pick === "H" ? (
-                                    <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "H" : undefined} />
-                                  ) : resultsMap[f.fixture_index] === "H" ? (
-                                    <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
-                                  ) : (
-                                    <span className="h-5" />
-                                  )}
+                              <div className="mt-3 grid grid-cols-3">
+                                <div className="relative h-8">
+                                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                                    {pick === "H" ? (
+                                      <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "H" : undefined} />
+                                    ) : resultsMap[f.fixture_index] === "H" ? (
+                                      <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
+                                    ) : (
+                                      <span className="h-5" />
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="flex justify-center">
-                                  {pick === "D" ? (
-                                    <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "D" : undefined} />
-                                  ) : resultsMap[f.fixture_index] === "D" ? (
-                                    <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
-                                  ) : (
-                                    <span className="h-5" />
-                                  )}
+                                <div className="relative h-8">
+                                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                                    {pick === "D" ? (
+                                      <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "D" : undefined} />
+                                    ) : resultsMap[f.fixture_index] === "D" ? (
+                                      <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
+                                    ) : (
+                                      <span className="h-5" />
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="flex justify-center">
-                                  {pick === "A" ? (
-                                    <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "A" : undefined} />
-                                  ) : resultsMap[f.fixture_index] === "A" ? (
-                                    <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
-                                  ) : (
-                                    <span className="h-5" />
-                                  )}
+                                <div className="relative h-8">
+                                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                                    {pick === "A" ? (
+                                      <Dot correct={resultsMap[f.fixture_index] ? resultsMap[f.fixture_index] === "A" : undefined} />
+                                    ) : resultsMap[f.fixture_index] === "A" ? (
+                                      <span className="inline-block h-5 w-5 rounded-full bg-gray-300 border-2 border-white shadow ring-1 ring-gray-200" />
+                                    ) : (
+                                      <span className="h-5" />
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>

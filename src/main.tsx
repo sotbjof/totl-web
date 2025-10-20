@@ -12,8 +12,11 @@ import HomePage from "./pages/Home";
 import GlobalPage from "./pages/Global";
 import CreateLeaguePage from "./pages/CreateLeague";
 import HowToPlayPage from "./pages/HowToPlay";
+import NewPredictionsCentre from "./pages/NewPredictionsCentre";
+import ProfilePage from "./pages/Profile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import PredictionsBanner from "./components/PredictionsBanner";
+import BottomNav from "./components/BottomNav";
 import SignIn from "./pages/SignIn";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -42,22 +45,23 @@ function AppContent({ menuOpen, setMenuOpen }: {
   // Admin user ID (Jof)
   const isAdmin = user?.id === '4542c037-5b38-40d0-b189-847b8f17c222';
   
+  // Hide header/banner for full-screen pages
+  const isFullScreenPage = location.pathname === '/new-predictions';
+  
   return (
     <>
 
       {/* Site Header */}
-      <header className="sticky top-0 z-50 text-white shadow">
+      {!isFullScreenPage && <header className="sticky top-0 z-50 text-white shadow">
         <div className="bg-emerald-600">
           <div className="max-w-6xl mx-auto px-4 h-24 sm:h-28 flex items-center gap-6">
-                 <Link to="/" className="flex items-center no-underline">
+                 <Link to="/" className="flex items-center no-underline gap-3">
                    <img src="/assets/badges/totl-logo1.svg" alt="TOTL" className="h-20 sm:h-26 w-auto" />
+                   <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded">BETA</span>
                  </Link>
 
             {/* Desktop nav */}
             <div className="ml-auto hidden sm:flex items-center gap-6">
-              <Link to="/tables" className="text-white no-underline hover:opacity-90 text-xl font-bold">Mini Leagues</Link>
-              <Link to="/predictions" className="text-white no-underline hover:opacity-90 text-xl font-bold">Predictions</Link>
-              <Link to="/global" className="text-white no-underline hover:opacity-90 text-xl font-bold">Leaderboard</Link>
               <Link to="/how-to-play" className="text-white no-underline hover:opacity-90 text-xl font-bold">How To Play</Link>
               {isAdmin && <Link to="/admin" className="text-white no-underline hover:opacity-90 text-xl font-bold">Admin</Link>}
             </div>
@@ -95,7 +99,7 @@ function AppContent({ menuOpen, setMenuOpen }: {
           {/* Mobile menu */}
           {menuOpen && (
             <div className="sm:hidden border-t border-white/20">
-              <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-4 text-white">
+              <div className="max-w-6xl mx-auto px-4 py-3 pb-6 flex flex-col gap-4 text-white">
                 {/* User info for mobile */}
                 <div className="pb-2 border-b border-white/20 mb-2">
                   <div className="text-sm text-white/70">Logged in as:</div>
@@ -105,25 +109,11 @@ function AppContent({ menuOpen, setMenuOpen }: {
                 </div>
                 
                 <Link
-                  to="/tables"
+                  to="/profile"
                   className="text-white no-underline hover:opacity-90 text-xl font-bold"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Mini Leagues
-                </Link>
-                <Link
-                  to="/predictions"
-                  className="text-white no-underline hover:opacity-90 text-xl font-bold"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Predictions
-                </Link>
-                <Link
-                  to="/global"
-                  className="text-white no-underline hover:opacity-90 text-xl font-bold"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Leaderboard
+                  Profile
                 </Link>
                 <Link
                   to="/how-to-play"
@@ -148,7 +138,7 @@ function AppContent({ menuOpen, setMenuOpen }: {
                     await signOut();
                     setMenuOpen(false);
                   }}
-                  className="text-left text-red-200 hover:text-red-100 text-lg font-bold border-t border-white/20 pt-4 mt-2"
+                  className="text-left text-white hover:opacity-90 text-xl font-bold"
                 >
                   Sign Out
                 </button>
@@ -156,10 +146,10 @@ function AppContent({ menuOpen, setMenuOpen }: {
             </div>
           )}
         </div>
-      </header>
+      </header>}
 
-      {/* Global Predictions Banner - hide on auth page */}
-      {location.pathname !== '/auth' && <PredictionsBanner />}
+      {/* Global Predictions Banner - hide on auth page and full-screen pages */}
+      {!isFullScreenPage && location.pathname !== '/auth' && <PredictionsBanner />}
 
       {/* Welcome Message */}
       {showWelcome && (
@@ -183,16 +173,21 @@ function AppContent({ menuOpen, setMenuOpen }: {
       {/* Routes */}
       <Routes>
         <Route path="/auth" element={<SignIn />} />
+        <Route path="/new-predictions" element={<NewPredictionsCentre />} />
         <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
         <Route path="/tables" element={<RequireAuth><TablesPage /></RequireAuth>} />
         <Route path="/league/:code" element={<RequireAuth><LeaguePage /></RequireAuth>} />
         <Route path="/predictions" element={<RequireAuth><PredictionsPage /></RequireAuth>} />
         <Route path="/global" element={<RequireAuth><GlobalPage /></RequireAuth>} />
+        <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
         <Route path="/how-to-play" element={<RequireAuth><HowToPlayPage /></RequireAuth>} />
         <Route path="/create-league" element={<RequireAuth><CreateLeaguePage /></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {/* Bottom Navigation - hide on auth page */}
+      {location.pathname !== '/auth' && <BottomNav />}
     </>
   );
 }

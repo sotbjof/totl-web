@@ -6,6 +6,7 @@ import HomePage from "./pages/Home";
 import LeaguePage from "./pages/League";
 import PredictionsPage from "./pages/Predictions";
 import AdminPage from "./pages/Admin";
+import NewPredictionsCentre from "./pages/NewPredictionsCentre";
 
 export default function App() {
   const [oldSchoolMode, setOldSchoolMode] = useState(false);
@@ -25,22 +26,26 @@ export default function App() {
 
   return (
     <Router>
-      <div className={`min-h-screen overflow-y-auto ${oldSchoolMode ? 'oldschool-theme' : 'bg-slate-50 text-slate-900'}`}>
-        <SiteHeader />
-
-        {/* 🟡 Add this right under the header */}
-        <PredictionsBanner />
-
-        <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/league/:id" element={<LeaguePage />} />
-            <Route path="/predictions" element={<PredictionsPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-          </Routes>
-        </main>
-
-      </div>
+      <Routes>
+        {/* Full-screen route without header/banner */}
+        <Route path="/new-predictions" element={<NewPredictionsCentre />} />
+        
+        {/* Regular routes with header/banner */}
+        <Route path="*" element={
+          <div className={`min-h-screen overflow-y-auto ${oldSchoolMode ? 'oldschool-theme' : 'bg-slate-50 text-slate-900'}`}>
+            <SiteHeader />
+            <PredictionsBanner />
+            <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/league/:id" element={<LeaguePage />} />
+                <Route path="/predictions" element={<PredictionsPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+              </Routes>
+            </main>
+          </div>
+        } />
+      </Routes>
     </Router>
   );
 }
