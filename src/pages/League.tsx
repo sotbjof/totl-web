@@ -741,7 +741,7 @@ export default function LeaguePage() {
         perGw.set(g, map);
       });
 
-      gwsWithResults.forEach((g) => {
+      relevantGws.forEach((g) => {
         const idxInGw = Array.from(outcomeByGwIdx.entries())
           .filter(([k]) => parseInt(k.split(":")[0], 10) === g)
           .map(([k, v]) => ({ idx: parseInt(k.split(":")[1], 10), out: v }));
@@ -781,7 +781,7 @@ export default function LeaguePage() {
         form.set(m.id, []);
       });
 
-      gwsWithResults.forEach((g) => {
+      relevantGws.forEach((g) => {
         const rows = Array.from(perGw.get(g)!.values());
         rows.forEach((r) => {
           ocp.set(r.user_id, (ocp.get(r.user_id) ?? 0) + r.score);
