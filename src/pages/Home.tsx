@@ -599,7 +599,7 @@ export default function HomePage() {
       {/* Mini Leagues */}
       <section className="mt-12">
         <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-          Mini Leagues
+          MiniLeagues
         </h2>
         <div className="mt-3">
           {loading ? (
