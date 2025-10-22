@@ -37,13 +37,32 @@ export default function BottomNav() {
   return (
     <>
       <style>{`
+        .bottom-nav-absolute {
+          position: fixed !important;
+          bottom: 0px !important;
+          left: 0px !important;
+          right: 0px !important;
+          width: 100vw !important;
+          max-width: 100vw !important;
+          z-index: 9999 !important;
+          transform: translate3d(0, 0, 0) !important;
+          -webkit-transform: translate3d(0, 0, 0) !important;
+          will-change: transform !important;
+          contain: layout style paint !important;
+        }
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
-          .bottom-nav-safe {
-            padding-bottom: env(safe-area-inset-bottom);
+          .bottom-nav-absolute {
+            padding-bottom: env(safe-area-inset-bottom) !important;
+          }
+        }
+        @media (max-height: 800px) {
+          .bottom-nav-absolute {
+            position: fixed !important;
+            bottom: 0px !important;
           }
         }
       `}</style>
-      <div className="fixed bottom-0 left-0 right-0 bg-[#1C8376] shadow-lg z-50 bottom-nav-safe" style={{position: 'fixed', bottom: 0, left: 0, right: 0, width: '100%'}}>
+      <div className="bg-[#1C8376] shadow-lg bottom-nav-absolute">
         <div className="flex items-center justify-around max-w-md mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
