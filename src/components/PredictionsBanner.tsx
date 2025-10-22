@@ -157,7 +157,7 @@ export default function PredictionsBanner() {
     <div className="mx-auto max-w-6xl px-4">
       {bannerType === "predictions" ? (
         <Link
-          to="/predictions"
+          to="/new-predictions"
           className="block mt-4 rounded-lg bg-blue-600 px-4 py-3 hover:bg-blue-700 transition-colors"
         >
           <div className="text-center">

@@ -747,7 +747,7 @@ export default function HomePage() {
           </h2>
           {fixtures.length > 0 && !gwSubmitted && gwScore === null && (
             <div>
-              <Link to="/predictions" className="inline-block px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 transition-colors no-underline">Do your predictions</Link>
+              <Link to="/new-predictions" className="inline-block px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 transition-colors no-underline">Do your predictions</Link>
             </div>
           )}
         </div>

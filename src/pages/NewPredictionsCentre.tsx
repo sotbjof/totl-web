@@ -126,21 +126,27 @@ export default function NewPredictionsCentre() {
   const startPosRef = useRef({ x: 0, y: 0 });
   const isResettingRef = useRef(false);
 
-  // Load real GW 8 data from database
+  // Load current gameweek data from database
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        // Set current gameweek to 8 (since we're between GW 8 and 9)
-    setCurrentGw(8);
-    
-        // Fetch real GW 8 fixtures from database
+        // Fetch current gameweek from meta table
+        const { data: meta } = await supabase
+          .from("meta")
+          .select("current_gw")
+          .eq("id", 1)
+          .maybeSingle();
+        const currentGw = (meta as any)?.current_gw ?? 1;
+        setCurrentGw(currentGw);
+        
+        // Fetch fixtures for current gameweek
         const { data: fx, error: fxErr } = await supabase
           .from("fixtures")
           .select(
             "id,gw,fixture_index,home_name,away_name,home_team,away_team,home_code,away_code,kickoff_time"
           )
-          .eq("gw", 8)
+          .eq("gw", currentGw)
           .order("fixture_index", { ascending: true });
 
         if (fxErr) {
@@ -151,15 +157,15 @@ export default function NewPredictionsCentre() {
         const realFixtures: Fixture[] = (fx as Fixture[]) ?? [];
         if (alive) {
           setFixtures(realFixtures);
-          console.log('Loaded', realFixtures.length, 'real GW 8 fixtures');
+          console.log('Loaded', realFixtures.length, 'real GW', currentGw, 'fixtures');
         }
 
-        // Fetch user's picks for GW 8
+        // Fetch user's picks for current gameweek
         if (user?.id) {
           const { data: pk, error: pkErr } = await supabase
             .from("picks")
             .select("gw,fixture_index,pick")
-            .eq("gw", 8)
+            .eq("gw", currentGw)
             .eq("user_id", user.id);
 
           if (pkErr) {
@@ -178,15 +184,15 @@ export default function NewPredictionsCentre() {
           
           if (alive) {
             setPicks(picksMap);
-            console.log('Loaded', picksMap.size, 'user picks for GW 8');
+            console.log('Loaded', picksMap.size, 'user picks for GW', currentGw);
           }
         }
 
-        // Fetch GW 8 results for highlighting
+        // Fetch results for current gameweek for highlighting
         const { data: rs, error: rsErr } = await supabase
           .from("gw_results")
           .select("gw,fixture_index,result")
-          .eq("gw", 8);
+          .eq("gw", currentGw);
 
         if (rsErr) {
           console.error('Error fetching results:', rsErr);
@@ -617,7 +623,7 @@ export default function NewPredictionsCentre() {
                 if (allPicksMade) {
                   // TODO: Submit picks to database
                   console.log('Confirming picks:', Array.from(picks.entries()));
-                  navigate("/predictions");
+                  navigate("/new-predictions");
                 } else {
                   alert("Please make all predictions before confirming");
                 }
@@ -629,7 +635,7 @@ export default function NewPredictionsCentre() {
             </button>
             
             <button
-              onClick={() => navigate("/predictions")}
+              onClick={() => navigate("/")}
               className="w-full py-3 text-slate-600 hover:text-slate-800 font-medium"
             >
               Cancel
@@ -647,7 +653,7 @@ export default function NewPredictionsCentre() {
         <div className="p-4 bg-white shadow-sm">
           <div className="max-w-md mx-auto">
             <div className="flex items-center justify-between mb-3">
-              <button onClick={() => navigate("/predictions")} className="text-slate-600 hover:text-slate-800">
+              <button onClick={() => navigate("/")} className="text-slate-600 hover:text-slate-800">
                 ✕
               </button>
               <h2 className="text-xl font-bold text-slate-700 absolute left-1/2 transform -translate-x-1/2">Gameweek {currentGw}</h2>
@@ -965,7 +971,18 @@ export default function NewPredictionsCentre() {
           onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
           onTouchEnd={handleEnd}
         >
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden relative">
+            {/* Swipe indicator for first card */}
+            {currentIndex === 0 && (
+              <div className="absolute top-3 right-3 z-10">
+                <img 
+                  src="https://cdn-icons-png.flaticon.com/512/4603/4603384.png" 
+                  alt="Swipe to navigate" 
+                  className="w-8 h-8 opacity-60"
+                />
+              </div>
+            )}
+            
             {/* Card content */}
             <div className="p-8">
               {/* Fixture date at top */}
