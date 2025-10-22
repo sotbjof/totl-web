@@ -272,12 +272,9 @@ export default function NewPredictionsCentre() {
     
     setCardState({ x: deltaX, y: deltaY, rotation, opacity: 1, scale: 1 });
     
-    // Show feedback with better mobile thresholds
+    // Show feedback for horizontal swipes only
     if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
       setShowFeedback(deltaX > 0 ? "away" : "home");
-    } else if (deltaY > 60 && deltaY > Math.abs(deltaX)) {
-      // Only trigger draw on significant downward movement to avoid page refresh conflicts
-      setShowFeedback("draw");
     } else {
       setShowFeedback(null);
     }
@@ -289,15 +286,12 @@ export default function NewPredictionsCentre() {
     
     const { x, y } = cardState;
     const horizontalThreshold = 70; // Reduced for easier mobile swiping
-    const verticalThreshold = 80; // Higher threshold for draw to avoid page refresh conflicts
     
-    let pick: "H" | "D" | "A" | null = null;
+    let pick: "H" | "A" | null = null;
     
-    // Determine if swipe was strong enough
+    // Only handle horizontal swipes
     if (Math.abs(x) > horizontalThreshold && Math.abs(x) > Math.abs(y)) {
       pick = x > 0 ? "A" : "H";
-    } else if (y > verticalThreshold && y > Math.abs(x)) {
-      pick = "D";
     }
     
     if (pick) {
@@ -309,7 +303,13 @@ export default function NewPredictionsCentre() {
     }
   };
 
-  const animateCardOut = async (pick: "H" | "D" | "A") => {
+  const handleTap = () => {
+    if (isAnimating) return;
+    // Tap for draw
+    animateCardOut("D");
+  };
+
+  const animateCardOut = async (pick: "H" | "A" | "D") => {
     setIsAnimating(true);
     setShowFeedback(null);
     
@@ -979,8 +979,15 @@ export default function NewPredictionsCentre() {
           }}
           onTouchEnd={(e) => {
             e.preventDefault(); // Prevent page refresh conflicts
-            handleEnd();
+            const { x, y } = cardState;
+            // If it's a small movement, treat as tap for draw
+            if (Math.abs(x) < 20 && Math.abs(y) < 20) {
+              handleTap();
+            } else {
+              handleEnd();
+            }
           }}
+          onClick={handleTap}
         >
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden relative">
             {/* Swipe indicator for first card */}
@@ -993,6 +1000,13 @@ export default function NewPredictionsCentre() {
                 />
               </div>
             )}
+            
+            {/* Tap for draw indicator */}
+            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-10">
+              <div className="bg-slate-100 text-slate-600 text-sm px-4 py-2 rounded-full opacity-80">
+                Tap for Draw
+              </div>
+            </div>
             
             {/* Card content */}
             <div className="p-8">
