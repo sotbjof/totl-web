@@ -875,7 +875,6 @@ export default function LeaguePage() {
     };
 
     // Check if this is a late-starting league (not one of the special leagues that start from GW0)
-    const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
     const gw7StartLeagues = ['The Bird league'];
     const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
     const isLateStartingLeague = league && (gw7StartLeagues.includes(league.name) || gw8StartLeagues.includes(league.name));

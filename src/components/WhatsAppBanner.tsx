@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function WhatsAppBanner() {
   const [isVisible, setIsVisible] = useState(false);
@@ -67,7 +67,7 @@ export default function WhatsAppBanner() {
 
   return (
     <>
-      <style jsx>{`
+      <style>{`
         @keyframes bounceIn {
           0% {
             transform: scale(0.3);
