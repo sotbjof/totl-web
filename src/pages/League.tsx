@@ -5,6 +5,99 @@ import { useAuth } from "../context/AuthContext";
 
 const MAX_MEMBERS = 8;
 
+// Helper function to determine league start GW based on creation date and current GW deadline
+async function getLeagueStartGw(league: any, currentGw: number): Promise<number> {
+  const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+  const gw7StartLeagues = ['The Bird league'];
+  const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
+  
+  if (specialLeagues.includes(league?.name || '')) {
+    return 0; // Show all results from GW0
+  } else if (gw7StartLeagues.includes(league?.name || '')) {
+    return 7; // Only show from GW7 onwards
+  } else if (gw8StartLeagues.includes(league?.name || '')) {
+    return 8; // Only show from GW8 onwards
+  } else {
+    // For new leagues: check if created before the most recent completed GW deadline
+    if (league?.created_at && currentGw) {
+      // Find the most recent GW that has results (completed GW)
+      const { data: resultsData } = await supabase
+        .from("gw_results")
+        .select("gw")
+        .order("gw", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      const latestCompletedGw = resultsData?.gw;
+      
+      if (latestCompletedGw) {
+        // Get the deadline for the most recent completed GW
+        const { data: firstFixture } = await supabase
+          .from("fixtures")
+          .select("kickoff_time")
+          .eq("gw", latestCompletedGw)
+          .order("kickoff_time", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        
+        if (firstFixture?.kickoff_time) {
+          const firstKickoff = new Date(firstFixture.kickoff_time);
+          const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000)); // 75 minutes before
+          const leagueCreatedAt = new Date(league.created_at);
+          
+          console.log('League deadline check:', {
+            leagueName: league?.name,
+            latestCompletedGw,
+            firstKickoff: firstKickoff.toISOString(),
+            deadlineTime: deadlineTime.toISOString(),
+            leagueCreatedAt: leagueCreatedAt.toISOString(),
+            createdBeforeDeadline: leagueCreatedAt <= deadlineTime
+          });
+          
+          if (leagueCreatedAt <= deadlineTime) {
+            return latestCompletedGw; // Created before deadline - include completed GW
+          } else {
+            return latestCompletedGw + 1; // Created after deadline - start from next GW
+          }
+        } else {
+          return currentGw; // No fixtures for completed GW - start from current
+        }
+      } else {
+        return currentGw; // No completed GWs - start from current
+      }
+    } else {
+      return currentGw; // Fallback - start from current GW
+    }
+  }
+}
+
+// Helper function to check if a specific GW should be shown for a league (synchronous)
+function shouldShowGwForLeague(league: any, gw: number, gwDeadlines: Map<number, Date>): boolean {
+  const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
+  const gw7StartLeagues = ['The Bird league'];
+  const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
+  
+  if (specialLeagues.includes(league?.name || '')) {
+    return true; // Show all GWs
+  } else if (gw7StartLeagues.includes(league?.name || '')) {
+    return gw >= 7; // Only show from GW7 onwards
+  } else if (gw8StartLeagues.includes(league?.name || '')) {
+    return gw >= 8; // Only show from GW8 onwards
+  } else {
+    // For new leagues: check if league was created before the GW deadline
+    if (league?.created_at && gwDeadlines.has(gw)) {
+      const leagueCreatedAt = new Date(league.created_at);
+      const gwDeadline = gwDeadlines.get(gw)!;
+      
+      // If league was created before GW deadline, show the GW
+      return leagueCreatedAt <= gwDeadline;
+    }
+    
+    // If no deadline info available, default to showing GW
+    return true;
+  }
+}
+
 /* =========================
    Types
    ========================= */
@@ -249,34 +342,34 @@ export default function LeaguePage() {
     return m;
   }, [members]);
 
-  // Determine which tabs should be visible for this league
-  const tabVisibility = useMemo(() => {
-    if (!league) return { showGwResults: false, showGwPredictions: false };
-    
-    const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const gw7StartLeagues = ['The Bird league'];
-    const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
-    
-    let leagueStartGw: number;
-    if (specialLeagues.includes(league.name)) {
-      leagueStartGw = 0; // Show all results from GW0
-    } else if (gw7StartLeagues.includes(league.name)) {
-      leagueStartGw = 7; // Only show from GW7 onwards
-    } else if (gw8StartLeagues.includes(league.name)) {
-      leagueStartGw = 8; // Only show from GW8 onwards
-    } else {
-      leagueStartGw = (currentGw ?? 1) + 1; // Late-starting leagues start from NEXT GW
-    }
-    
-    // For GW Results: only show if there are results for the league's start gameweek or later
-    const hasRelevantResults = availableGws.some(gw => gw >= leagueStartGw);
-    const showGwResults = specialLeagues.includes(league.name) || hasRelevantResults;
-    
-    // For GW Predictions: only show if current GW is >= league start gameweek
-    const showGwPredictions = specialLeagues.includes(league.name) || gw7StartLeagues.includes(league.name) || gw8StartLeagues.includes(league.name) || (currentGw && currentGw >= leagueStartGw);
-    
-    return { showGwResults, showGwPredictions };
-  }, [league, currentGw, availableGws]);
+  // Store GW deadlines for synchronous access
+  const [gwDeadlines, setGwDeadlines] = useState<Map<number, Date>>(new Map());
+  
+  // Calculate GW deadlines once when component loads
+  useEffect(() => {
+    (async () => {
+      const deadlines = new Map<number, Date>();
+      
+      // Get deadlines for completed GWs (GWs that have results)
+      for (const gw of availableGws) {
+        const { data: firstFixture } = await supabase
+          .from("fixtures")
+          .select("kickoff_time")
+          .eq("gw", gw)
+          .order("kickoff_time", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        
+        if (firstFixture?.kickoff_time) {
+          const firstKickoff = new Date(firstFixture.kickoff_time);
+          const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000)); // 75 minutes before
+          deadlines.set(gw, deadlineTime);
+        }
+      }
+      
+      setGwDeadlines(deadlines);
+    })();
+  }, [availableGws]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -390,11 +483,9 @@ export default function LeaguePage() {
   useEffect(() => {
     if (!league) return;
     
-    // If user is on a tab that shouldn't be visible, redirect to Table tab
-    if ((tab === "gwr" && !tabVisibility.showGwResults) || (tab === "gw" && !tabVisibility.showGwPredictions)) {
-      setTab("mlt");
-    }
-  }, [league, tab, tabVisibility]);
+    // For now, we'll let users access all tabs and handle visibility within each tab component
+    // The individual tab components will show appropriate messages if the GW shouldn't be visible
+  }, [league, tab]);
 
   /* ---------- realtime chat: load + subscribe ---------- */
   useEffect(() => {
@@ -704,20 +795,14 @@ export default function LeaguePage() {
       const gw7StartLeagues = ['The Bird league'];
       const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
       
-      let leagueStartGw: number;
-      if (specialLeagues.includes(league?.name || '')) {
-        leagueStartGw = 0; // Show all results from GW0
-      } else if (gw7StartLeagues.includes(league?.name || '')) {
-        leagueStartGw = 7; // Only show from GW7 onwards
-      } else if (gw8StartLeagues.includes(league?.name || '')) {
-        leagueStartGw = 8; // Only show from GW8 onwards
-      } else {
-        leagueStartGw = (currentGw ?? 1) + 1; // Late-starting leagues start from NEXT GW
-      }
+      const leagueStartGw = await getLeagueStartGw(league, currentGw);
       const relevantGws = gwsWithResults.filter(gw => gw >= leagueStartGw);
+
+      console.log('Table calculation for league:', league?.name, 'leagueStartGw:', leagueStartGw, 'relevantGws:', relevantGws);
 
       // For late-starting leagues, if there are no results for the start gameweek or later, show empty table
       if (!specialLeagues.includes(league?.name || '') && !gw7StartLeagues.includes(league?.name || '') && relevantGws.length === 0) {
+        console.log('Showing empty table for late-starting league:', league?.name);
         setMltRows(
           members.map((m) => ({
             user_id: m.id,
@@ -740,6 +825,8 @@ export default function LeaguePage() {
         .in("user_id", members.map((m) => m.id))
         .in("gw", relevantGws);
       const picksAll = (pk as PickRow[]) ?? [];
+      
+      console.log('Picks fetched for relevantGws:', relevantGws, 'picks:', picksAll.length);
 
       type GwScore = { user_id: string; score: number; unicorns: number };
       const perGw = new Map<number, Map<string, GwScore>>();
@@ -840,7 +927,7 @@ export default function LeaguePage() {
     return () => {
       alive = false;
     };
-  }, [members]);
+  }, [members, league, currentGw]);
 
   /* =========================
      Renderers
@@ -875,9 +962,10 @@ export default function LeaguePage() {
     };
 
     // Check if this is a late-starting league (not one of the special leagues that start from GW0)
+    const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
     const gw7StartLeagues = ['The Bird league'];
     const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
-    const isLateStartingLeague = league && (gw7StartLeagues.includes(league.name) || gw8StartLeagues.includes(league.name));
+    const isLateStartingLeague = league && !specialLeagues.includes(league.name) && !gw7StartLeagues.includes(league.name) && !gw8StartLeagues.includes(league.name);
 
     const rows = mltRows.length
       ? mltRows
@@ -1001,28 +1089,13 @@ export default function LeaguePage() {
       return <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">No current game week available.</div>;
     }
 
-    // Check if this gameweek is relevant for this league
-    const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const gw7StartLeagues = ['The Bird league'];
-    const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
-    
-    let leagueStartGw: number;
-    if (specialLeagues.includes(league?.name || '')) {
-      leagueStartGw = 0; // Show all results from GW0
-    } else if (gw7StartLeagues.includes(league?.name || '')) {
-      leagueStartGw = 7; // Only show from GW7 onwards
-    } else if (gw8StartLeagues.includes(league?.name || '')) {
-      leagueStartGw = 8; // Only show from GW8 onwards
-    } else {
-      leagueStartGw = (currentGw ?? 1) + 1; // Late-starting leagues start from NEXT GW
-    }
-    
-    if (!specialLeagues.includes(league?.name || '') && !gw7StartLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && picksGw < leagueStartGw) {
+    // Check if this specific GW should be shown for this league
+    if (!shouldShowGwForLeague(league, picksGw, gwDeadlines)) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
           <div className="text-center">
             <div className="text-lg font-semibold mb-2">No Predictions Available</div>
-            <div className="text-sm">This league started from GW{leagueStartGw} onwards.</div>
+            <div className="text-sm">This league started from a later gameweek.</div>
             <div className="text-sm">GW{picksGw} predictions are not included in this league.</div>
           </div>
         </div>
@@ -1158,36 +1231,53 @@ export default function LeaguePage() {
 
                           const toChips = (want: "H" | "D" | "A") => {
                             const filtered = these.filter((p) => p.pick === want);
-                            const allPicked = these.length === members.length && filtered.length === members.length;
                             const actualResult = outcomes.get(fxIdx);
+                            const allPicked = these.length === members.length && filtered.length === members.length;
                             
-                            return filtered.map((p, idx) => {
-                              const m = members.find((mm) => mm.id === p.user_id);
-                              const letter = initials(m?.name ?? "?");
-                              const isCorrect = actualResult ? actualResult === want : null;
-                              
-                              if (allPicked) {
-                                // Stack effect - use relative positioning with negative margins
-                                const overlapAmount = 10;
-                                return (
-                                  <span 
-                                    key={p.user_id}
-                                    className="inline-block"
-                                    style={{
-                                      marginLeft: idx > 0 ? `-${overlapAmount}px` : '0',
-                                      position: 'relative',
-                                      zIndex: idx
-                                    }}
-                                  >
-                                    <Chip letter={letter} correct={isCorrect} unicorn={false} />
-                                  </span>
-                                );
-                              }
-                              
-                              return (
-                                <Chip key={p.user_id} letter={letter} correct={isCorrect} unicorn={false} />
-                              );
-                            });
+                            // Group chips into rows of maximum 4
+                            const chipsPerRow = 4;
+                            const rows = [];
+                            
+                            for (let i = 0; i < filtered.length; i += chipsPerRow) {
+                              const rowChips = filtered.slice(i, i + chipsPerRow);
+                              rows.push(rowChips);
+                            }
+                            
+                            return (
+                              <div className="flex flex-col gap-1">
+                                {rows.map((row, rowIdx) => (
+                                  <div key={rowIdx} className="flex items-center justify-center">
+                                    {row.map((p, idx) => {
+                                      const m = members.find((mm) => mm.id === p.user_id);
+                                      const letter = initials(m?.name ?? "?");
+                                      const isCorrect = actualResult ? actualResult === want : null;
+                                      
+                                      if (allPicked) {
+                                        // Stack effect - use relative positioning with negative margins
+                                        const overlapAmount = 8;
+                                        return (
+                                          <span 
+                                            key={p.user_id}
+                                            className="inline-block"
+                                            style={{
+                                              marginLeft: idx > 0 ? `-${overlapAmount}px` : '0',
+                                              position: 'relative',
+                                              zIndex: idx
+                                            }}
+                                          >
+                                            <Chip letter={letter} correct={isCorrect} unicorn={false} />
+                                          </span>
+                                        );
+                                      }
+                                      
+                                      return (
+                                        <Chip key={p.user_id} letter={letter} correct={isCorrect} unicorn={false} />
+                                      );
+                                    })}
+                                  </div>
+                                ))}
+                              </div>
+                            );
                           };
 
                           const homeBadge = `/assets/badges/${homeCode.toUpperCase()}.png`;
@@ -1215,18 +1305,18 @@ export default function LeaguePage() {
                                 
                                 {/* Pips underneath - same as Home Page */}
                                 <div className="mt-2 grid grid-cols-3">
-                                  <div className="relative h-6">
-                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5">
+                                  <div className="relative min-h-6">
+                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                                       {toChips("H")}
                                     </div>
                                   </div>
-                                  <div className="relative h-6">
-                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5">
+                                  <div className="relative min-h-6">
+                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                                       {toChips("D")}
                                     </div>
                                   </div>
-                                  <div className="relative h-6">
-                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5">
+                                  <div className="relative min-h-6">
+                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                                       {toChips("A")}
                                     </div>
                                   </div>
@@ -1265,29 +1355,13 @@ export default function LeaguePage() {
     
     if (!resGw) return <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">No game week selected.</div>;
 
-    // Check if this gameweek is relevant for this league
-    const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
-    const gw7StartLeagues = ['The Bird league'];
-    const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
-    
-    let leagueStartGw: number;
-    if (specialLeagues.includes(league?.name || '')) {
-      leagueStartGw = 0; // Show all results from GW0
-    } else if (gw7StartLeagues.includes(league?.name || '')) {
-      leagueStartGw = 7; // Only show from GW7 onwards
-    } else if (gw8StartLeagues.includes(league?.name || '')) {
-      leagueStartGw = 8; // Only show from GW8 onwards
-    } else {
-      leagueStartGw = (currentGw ?? 1) + 1; // Late-starting leagues start from NEXT GW
-    }
-    
-    // For late-starting leagues, don't show results for gameweeks that ended before the league started
-    if (!specialLeagues.includes(league?.name || '') && !gw7StartLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && resGw < leagueStartGw) {
+    // Check if this specific GW should be shown for this league
+    if (!shouldShowGwForLeague(league, resGw, gwDeadlines)) {
       return (
         <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">
           <div className="text-center">
             <div className="text-lg font-semibold mb-2">No Results Available</div>
-            <div className="text-sm">This league started from GW{leagueStartGw} onwards.</div>
+            <div className="text-sm">This league started from a later gameweek.</div>
             <div className="text-sm">GW{resGw} results are not included in this league.</div>
           </div>
         </div>
@@ -1502,8 +1576,8 @@ export default function LeaguePage() {
             >
               Chat
             </button>
-            {/* Only show GW Results tab for special leagues or if there are results for the league's start gameweek */}
-            {tabVisibility.showGwResults && (
+            {/* Show GW Results tab if there are any results available */}
+            {availableGws.length > 0 && (
               <button
                 onClick={() => setTab("gwr")}
                 className={
@@ -1515,8 +1589,8 @@ export default function LeaguePage() {
                 <span className="sm:hidden whitespace-pre-line">{selectedGw ? `GW${selectedGw}\nResults` : (currentGw ? `GW${currentGw}\nResults` : "GW\nResults")}</span>
               </button>
             )}
-            {/* Only show GW Predictions tab for special leagues or if current GW is >= league start */}
-            {tabVisibility.showGwPredictions && (
+            {/* Show GW Predictions tab if there's a current GW */}
+            {currentGw && (
               <button
                 onClick={() => setTab("gw")}
                 className={

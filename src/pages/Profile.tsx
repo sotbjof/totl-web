@@ -90,19 +90,19 @@ export default function Profile() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-4xl mx-auto p-6">
         {/* Profile Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-          <div className="flex items-center gap-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 mb-6">
+          <div className="flex items-start gap-4 sm:gap-6">
             {/* Avatar */}
-            <div className="w-16 h-16 bg-[#1C8376] rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#1C8376] rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold flex-shrink-0">
               {(user.user_metadata?.display_name || user.email || 'U')[0].toUpperCase()}
             </div>
             
             {/* User Info */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2 truncate">
                 {user.user_metadata?.display_name || 'User'}
               </h1>
-              <p className="text-slate-600 break-all">{user.email}</p>
+              <p className="text-slate-600 break-all text-sm sm:text-base">{user.email}</p>
               <p className="text-sm text-slate-500 mt-2">
                 Member since {new Date(user.created_at || '').toLocaleDateString('en-GB', { 
                   month: 'long', 
