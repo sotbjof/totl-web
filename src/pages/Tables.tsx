@@ -210,10 +210,10 @@ export default function TablesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 pt-6 pb-16">
         <div className="text-center">
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">Mini Leagues</h1>
-          <p className="mt-0 mb-6 text-base text-slate-500">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">Mini Leagues</h1>
+          <p className="mt-0 mb-6 text-sm text-slate-600">
             Create or join a private league<br />and battle it out with your friends.
           </p>
         </div>

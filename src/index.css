@@ -13,6 +13,7 @@ html {
 }
 body {
   overflow-y: auto !important;
+  padding-bottom: 80px; /* Space for bottom nav */
 }
 #root {
   overflow-y: auto !important;
@@ -629,4 +630,14 @@ select option {
   border-radius: 0 !important;
   box-shadow: 3px 3px 0px #000000 !important;
   text-transform: uppercase !important;
+}
+
+/* Hide scrollbar for horizontal carousel */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
 }
