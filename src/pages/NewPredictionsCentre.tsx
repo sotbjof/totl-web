@@ -272,10 +272,11 @@ export default function NewPredictionsCentre() {
     
     setCardState({ x: deltaX, y: deltaY, rotation, opacity: 1, scale: 1 });
     
-    // Show feedback
-    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+    // Show feedback with better mobile thresholds
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
       setShowFeedback(deltaX > 0 ? "away" : "home");
-    } else if (deltaY > 50 && deltaY > Math.abs(deltaX)) {
+    } else if (deltaY > 60 && deltaY > Math.abs(deltaX)) {
+      // Only trigger draw on significant downward movement to avoid page refresh conflicts
       setShowFeedback("draw");
     } else {
       setShowFeedback(null);
@@ -287,14 +288,15 @@ export default function NewPredictionsCentre() {
     setIsDragging(false);
     
     const { x, y } = cardState;
-    const threshold = 100;
+    const horizontalThreshold = 70; // Reduced for easier mobile swiping
+    const verticalThreshold = 80; // Higher threshold for draw to avoid page refresh conflicts
     
     let pick: "H" | "D" | "A" | null = null;
     
     // Determine if swipe was strong enough
-    if (Math.abs(x) > threshold && Math.abs(x) > Math.abs(y)) {
+    if (Math.abs(x) > horizontalThreshold && Math.abs(x) > Math.abs(y)) {
       pick = x > 0 ? "A" : "H";
-    } else if (y > threshold && y > Math.abs(x)) {
+    } else if (y > verticalThreshold && y > Math.abs(x)) {
       pick = "D";
     }
     
@@ -967,9 +969,18 @@ export default function NewPredictionsCentre() {
           onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
           onMouseUp={handleEnd}
           onMouseLeave={handleEnd}
-          onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
-          onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
-          onTouchEnd={handleEnd}
+          onTouchStart={(e) => {
+            e.preventDefault(); // Prevent page refresh conflicts
+            handleStart(e.touches[0].clientX, e.touches[0].clientY);
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault(); // Prevent page refresh conflicts
+            handleMove(e.touches[0].clientX, e.touches[0].clientY);
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault(); // Prevent page refresh conflicts
+            handleEnd();
+          }}
         >
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden relative">
             {/* Swipe indicator for first card */}
