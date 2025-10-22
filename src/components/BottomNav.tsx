@@ -35,8 +35,16 @@ export default function BottomNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#1C8376] shadow-lg z-50 safe-area-inset-bottom">
-      <div className="flex items-center justify-around max-w-md mx-auto">
+    <>
+      <style>{`
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+          .bottom-nav-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+          }
+        }
+      `}</style>
+      <div className="fixed bottom-0 left-0 right-0 bg-[#1C8376] shadow-lg z-50 bottom-nav-safe" style={{position: 'fixed', bottom: 0, left: 0, right: 0, width: '100%'}}>
+        <div className="flex items-center justify-around max-w-md mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -56,8 +64,9 @@ export default function BottomNav() {
             </button>
           );
         })}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
