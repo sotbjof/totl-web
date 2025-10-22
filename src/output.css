@@ -807,6 +807,10 @@ video {
   margin-left: 0.75rem;
 }
 
+.-mt-4{
+  margin-top: -1rem;
+}
+
 .block{
   display: block;
 }
@@ -921,6 +925,14 @@ video {
 
 .h-\[220px\]{
   height: 220px;
+}
+
+.h-32{
+  height: 8rem;
+}
+
+.h-1\/2{
+  height: 50%;
 }
 
 .min-h-screen{
@@ -1101,6 +1113,10 @@ video {
 
 .max-w-\[50rem\]{
   max-width: 50rem;
+}
+
+.max-w-\[80px\]{
+  max-width: 80px;
 }
 
 .flex-1{

@@ -46,7 +46,7 @@ function AppContent({ menuOpen, setMenuOpen }: {
   const isAdmin = user?.id === '4542c037-5b38-40d0-b189-847b8f17c222';
   
   // Hide header/banner for full-screen pages
-  const isFullScreenPage = location.pathname === '/new-predictions';
+  const isFullScreenPage = false;
   
   return (
     <>
