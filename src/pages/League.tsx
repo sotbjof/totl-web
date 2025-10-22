@@ -710,13 +710,47 @@ export default function LeaguePage() {
       if (!alive) return;
       setPicks((pk as PickRow[]) ?? []);
 
-      const { data: sb } = await supabase
-        .from("gw_submissions")
-        .select("user_id,gw,submitted_at")
-        .eq("gw", gwForData)
-        .in("user_id", memberIds);
-      if (!alive) return;
-      setSubs((sb as SubmissionRow[]) ?? []);
+      // Check submissions by looking at picks table - user has submitted if they have picks for all fixtures
+      const { data: fixtures } = await supabase
+        .from("fixtures")
+        .select("fixture_index")
+        .eq("gw", gwForData);
+      
+      if (fixtures && fixtures.length > 0) {
+        const { data: picks } = await supabase
+          .from("picks")
+          .select("user_id")
+          .eq("gw", gwForData)
+          .in("user_id", memberIds);
+        
+        if (!alive) return;
+        
+        // Create submission records for users who have picks for all fixtures
+        const submissions: SubmissionRow[] = [];
+        const totalFixtures = fixtures.length;
+        
+        // Group picks by user_id and count them
+        const picksByUser = new Map<string, number>();
+        picks?.forEach(pick => {
+          const count = picksByUser.get(pick.user_id) || 0;
+          picksByUser.set(pick.user_id, count + 1);
+        });
+        
+        // Create submission record for users who have picks for all fixtures
+        picksByUser.forEach((pickCount, userId) => {
+          if (pickCount === totalFixtures) {
+            submissions.push({
+              user_id: userId,
+              gw: gwForData,
+              submitted_at: new Date().toISOString()
+            });
+          }
+        });
+        
+        setSubs(submissions);
+      } else {
+        setSubs([]);
+      }
 
       const { data: rs } = await supabase.from("gw_results").select("gw,fixture_index,result");
       if (!alive) return;

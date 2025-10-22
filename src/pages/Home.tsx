@@ -147,13 +147,17 @@ export default function HomePage() {
 
       let submitted = false;
       {
-        const { data: sb } = await supabase
-          .from("gw_submissions")
-          .select("user_id")
-          .eq("user_id", user?.id)
-          .eq("gw", currentGw)
-          .maybeSingle();
-        submitted = !!sb;
+        // Check if user has picks for all fixtures in current GW
+        if (thisGwFixtures.length > 0) {
+          const { data: userPicksForGw } = await supabase
+            .from("picks")
+            .select("fixture_index")
+            .eq("user_id", user?.id)
+            .eq("gw", currentGw);
+          
+          // User has submitted if they have picks for all fixtures
+          submitted = !!(userPicksForGw && userPicksForGw.length === thisGwFixtures.length);
+        }
       }
 
       let score: number | null = null;
