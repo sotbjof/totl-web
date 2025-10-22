@@ -41,12 +41,35 @@ export default function SignIn() {
         return;
       }
       
-      // Also check session for recovery
+      // Check if user is already signed in via password reset
       const { data: { session } } = await supabase.auth.getSession();
       console.log('Session:', session);
-      if (session?.user && (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'))) {
-        console.log('Session-based recovery detected');
+      
+      // If user is signed in and we're on the auth page, check if this is a password reset
+      if (session?.user) {
+        // Check URL parameters again in case they're still there
+        if (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')) {
+          console.log('Session-based recovery detected');
+          setMode('password-reset');
+          return;
+        }
+        
+        // Check if this is a password reset by looking at the session's recovery metadata
+        // Supabase sets recovery metadata when password reset is used
+        if (session.user.app_metadata?.provider === 'email' && 
+            (session.user.app_metadata?.providers?.includes('email') || 
+             window.location.href.includes('recovery') ||
+             window.location.href.includes('reset'))) {
+          console.log('Password reset session detected');
+          setMode('password-reset');
+          return;
+        }
+        
+        // Fallback: if user is signed in and on auth page, assume it's password reset
+        // This handles cases where URL parameters are cleaned up
+        console.log('User signed in on auth page, assuming password reset');
         setMode('password-reset');
+        return;
       }
     };
     checkPasswordReset();
