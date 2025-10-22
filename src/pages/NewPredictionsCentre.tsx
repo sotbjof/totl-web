@@ -44,6 +44,7 @@ export default function NewPredictionsCentre() {
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [picks, setPicks] = useState<Map<number, Pick>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [submitted, setSubmitted] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -107,6 +108,10 @@ export default function NewPredictionsCentre() {
           if (alive) {
             setPicks(picksMap);
             console.log('Loaded', picksMap.size, 'user picks for GW', currentGw);
+            
+            // Check if user has submitted predictions (has picks for all fixtures)
+            const hasAllPicks = realFixtures.every(f => picksMap.has(f.fixture_index));
+            setSubmitted(hasAllPicks);
           }
         }
       } catch (error) {
@@ -208,21 +213,47 @@ export default function NewPredictionsCentre() {
                             </div>
                           </div>
                           
-                  {/* Prediction buttons - show for making predictions */}
+                  {/* Prediction buttons - show editable or read-only based on submitted state */}
                           <div className="grid grid-cols-3 gap-3">
+                            {submitted ? (
+                              <>
+                                <div className={`h-16 rounded-xl border text-sm font-medium flex items-center justify-center ${
+                                  userPick?.pick === "H"
+                                    ? "bg-[#1C8376] text-white border-[#1C8376]"
+                                    : "bg-slate-50 text-slate-400 border-slate-200"
+                                }`}>
+                                  Home Win
+                                </div>
+                                <div className={`h-16 rounded-xl border text-sm font-medium flex items-center justify-center ${
+                                  userPick?.pick === "D"
+                                    ? "bg-[#1C8376] text-white border-[#1C8376]"
+                                    : "bg-slate-50 text-slate-400 border-slate-200"
+                                }`}>
+                                  Draw
+                                </div>
+                                <div className={`h-16 rounded-xl border text-sm font-medium flex items-center justify-center ${
+                                  userPick?.pick === "A"
+                                    ? "bg-[#1C8376] text-white border-[#1C8376]"
+                                    : "bg-slate-50 text-slate-400 border-slate-200"
+                                }`}>
+                                  Away Win
+                                </div>
+                              </>
+                            ) : (
+                              <>
                             <button
                               onClick={() => {
                                 const newPicks = new Map(picks);
-                        newPicks.set(fixture.fixture_index, {
-                          fixture_index: fixture.fixture_index,
-                          pick: "H",
-                          gw: currentGw!
-                        });
+                            newPicks.set(fixture.fixture_index, {
+                              fixture_index: fixture.fixture_index,
+                              pick: "H",
+                              gw: currentGw!
+                            });
                                 setPicks(newPicks);
                               }}
                               className={`h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center ${
-                        userPick?.pick === "H"
-                          ? "bg-[#1C8376] text-white border-[#1C8376]"
+                            userPick?.pick === "H"
+                              ? "bg-[#1C8376] text-white border-[#1C8376]"
                                   : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
@@ -232,16 +263,16 @@ export default function NewPredictionsCentre() {
                             <button
                               onClick={() => {
                                 const newPicks = new Map(picks);
-                        newPicks.set(fixture.fixture_index, {
-                          fixture_index: fixture.fixture_index,
-                          pick: "D",
-                          gw: currentGw!
-                        });
+                            newPicks.set(fixture.fixture_index, {
+                              fixture_index: fixture.fixture_index,
+                              pick: "D",
+                              gw: currentGw!
+                            });
                                 setPicks(newPicks);
                               }}
                               className={`h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center ${
-                        userPick?.pick === "D"
-                          ? "bg-[#1C8376] text-white border-[#1C8376]"
+                            userPick?.pick === "D"
+                              ? "bg-[#1C8376] text-white border-[#1C8376]"
                                   : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
@@ -251,21 +282,23 @@ export default function NewPredictionsCentre() {
                             <button
                               onClick={() => {
                                 const newPicks = new Map(picks);
-                        newPicks.set(fixture.fixture_index, {
-                          fixture_index: fixture.fixture_index,
-                          pick: "A",
-                          gw: currentGw!
-                        });
+                            newPicks.set(fixture.fixture_index, {
+                              fixture_index: fixture.fixture_index,
+                              pick: "A",
+                              gw: currentGw!
+                            });
                                 setPicks(newPicks);
                               }}
                               className={`h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center ${
-                        userPick?.pick === "A"
-                          ? "bg-[#1C8376] text-white border-[#1C8376]"
+                            userPick?.pick === "A"
+                              ? "bg-[#1C8376] text-white border-[#1C8376]"
                                   : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
                               Away Win
                             </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
@@ -300,9 +333,12 @@ export default function NewPredictionsCentre() {
               </div>
             )}
             
+            {/* Show buttons only if not submitted */}
+            {!submitted && (
+              <>
             {/* Save Predictions Button */}
             <button
-              onClick={() => setShowSaveModal(true)}
+                  onClick={() => setShowSaveModal(true)}
               className="w-full py-4 bg-slate-600 text-white rounded-2xl font-bold hover:bg-slate-700 transition-colors"
             >
               Save Predictions
@@ -311,17 +347,29 @@ export default function NewPredictionsCentre() {
             {/* Confirm Predictions Button */}
             <button
               onClick={() => {
-                const allPicksMade = fixtures.every(f => picks.has(f.fixture_index));
+                    const allPicksMade = fixtures.every(f => picks.has(f.fixture_index));
                 if (allPicksMade) {
-                  setShowConfirmModal(true);
+                      setShowConfirmModal(true);
                 } else {
                   alert("Please make all predictions before confirming");
                 }
               }}
-              className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition-colors"
+                  className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition-colors"
             >
-              Confirm Predictions
+                  Confirm Predictions
             </button>
+              </>
+            )}
+            
+            {/* Show submitted message if predictions are confirmed */}
+            {submitted && (
+              <div className="text-center py-6">
+                <div className="text-lg font-bold text-green-600 mb-2">✅ Predictions Submitted!</div>
+                <div className="text-sm text-slate-600">
+                  Your predictions for Gameweek {currentGw} have been confirmed and locked.
+                </div>
+          </div>
+            )}
         </div>
           </div>
           
@@ -390,6 +438,9 @@ export default function NewPredictionsCentre() {
                       console.log('Successfully saved picks:', picksArray);
                       setShowSaveModal(false);
                       setShowSuccessModal(true);
+                      
+                      // Trigger banner refresh
+                      window.dispatchEvent(new CustomEvent('predictionsSubmitted'));
                     } catch (error) {
                       console.error('Error saving picks:', error);
                       alert('Failed to save predictions. Please try again.');
@@ -447,8 +498,12 @@ export default function NewPredictionsCentre() {
                       }
 
                       console.log('Successfully confirmed picks:', picksArray);
+                      setSubmitted(true);
                       setShowConfirmModal(false);
                       setShowSuccessModal(true);
+                      
+                      // Trigger banner refresh
+                      window.dispatchEvent(new CustomEvent('predictionsSubmitted'));
                     } catch (error) {
                       console.error('Error confirming picks:', error);
                       alert('Failed to confirm predictions. Please try again.');
