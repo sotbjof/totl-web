@@ -363,11 +363,37 @@ export default function NewPredictionsCentre() {
                   Cancel
             </button>
                 <button
-                  onClick={() => {
-                    console.log('Saving picks:', Array.from(picks.entries()));
-                    // TODO: Save picks to database
-                    setShowSaveModal(false);
-                    setShowSuccessModal(true);
+                  onClick={async () => {
+                    try {
+                      // Convert picks map to array for database insertion
+                      const picksArray = Array.from(picks.values()).map(pick => ({
+                        user_id: user?.id,
+                        gw: pick.gw,
+                        fixture_index: pick.fixture_index,
+                        pick: pick.pick
+                      }));
+
+                      // Insert/update picks in database
+                      const { error } = await supabase
+                        .from('picks')
+                        .upsert(picksArray, { 
+                          onConflict: 'user_id,gw,fixture_index',
+                          ignoreDuplicates: false 
+                        });
+
+                      if (error) {
+                        console.error('Error saving picks:', error);
+                        alert('Failed to save predictions. Please try again.');
+                        return;
+                      }
+
+                      console.log('Successfully saved picks:', picksArray);
+                      setShowSaveModal(false);
+                      setShowSuccessModal(true);
+                    } catch (error) {
+                      console.error('Error saving picks:', error);
+                      alert('Failed to save predictions. Please try again.');
+                    }
                   }}
                   className="flex-1 py-3 bg-slate-600 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors"
                 >
@@ -396,11 +422,37 @@ export default function NewPredictionsCentre() {
                   Go Back
                 </button>
                 <button
-                  onClick={() => {
-                    console.log('Confirming picks:', Array.from(picks.entries()));
-                    // TODO: Submit picks to database
-                    setShowConfirmModal(false);
-                    setShowSuccessModal(true);
+                  onClick={async () => {
+                    try {
+                      // Convert picks map to array for database insertion
+                      const picksArray = Array.from(picks.values()).map(pick => ({
+                        user_id: user?.id,
+                        gw: pick.gw,
+                        fixture_index: pick.fixture_index,
+                        pick: pick.pick
+                      }));
+
+                      // Insert/update picks in database
+                      const { error } = await supabase
+                        .from('picks')
+                        .upsert(picksArray, { 
+                          onConflict: 'user_id,gw,fixture_index',
+                          ignoreDuplicates: false 
+                        });
+
+                      if (error) {
+                        console.error('Error confirming picks:', error);
+                        alert('Failed to confirm predictions. Please try again.');
+                        return;
+                      }
+
+                      console.log('Successfully confirmed picks:', picksArray);
+                      setShowConfirmModal(false);
+                      setShowSuccessModal(true);
+                    } catch (error) {
+                      console.error('Error confirming picks:', error);
+                      alert('Failed to confirm predictions. Please try again.');
+                    }
                   }}
                   className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
                 >
