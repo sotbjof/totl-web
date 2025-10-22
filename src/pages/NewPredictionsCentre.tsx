@@ -43,6 +43,10 @@ export default function NewPredictionsCentre() {
   const [currentGw, setCurrentGw] = useState<number | null>(null);
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [picks, setPicks] = useState<Map<number, Pick>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Load current gameweek data from database
   useEffect(() => {
@@ -107,6 +111,10 @@ export default function NewPredictionsCentre() {
         }
       } catch (error) {
         console.error('Error loading GW data:', error);
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
       }
     })();
 
@@ -115,8 +123,8 @@ export default function NewPredictionsCentre() {
     };
   }, [user?.id]);
 
-  // Allow viewing without auth for testing
-  if (!currentGw || fixtures.length === 0) {
+  // Show loading state
+  if (loading || !currentGw || fixtures.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-slate-600">Loading fixtures...</div>
@@ -294,10 +302,7 @@ export default function NewPredictionsCentre() {
             
             {/* Save Predictions Button */}
             <button
-              onClick={() => {
-                console.log('Saving picks:', Array.from(picks.entries()));
-              // TODO: Save picks to database
-              }}
+              onClick={() => setShowSaveModal(true)}
               className="w-full py-4 bg-slate-600 text-white rounded-2xl font-bold hover:bg-slate-700 transition-colors"
             >
               Save Predictions
@@ -306,20 +311,126 @@ export default function NewPredictionsCentre() {
             {/* Confirm Predictions Button */}
             <button
               onClick={() => {
-              const allPicksMade = fixtures.every(f => picks.has(f.fixture_index));
+                const allPicksMade = fixtures.every(f => picks.has(f.fixture_index));
                 if (allPicksMade) {
-                console.log('Confirming picks:', Array.from(picks.entries()));
-                  // TODO: Submit picks to database
+                  setShowConfirmModal(true);
                 } else {
                   alert("Please make all predictions before confirming");
                 }
               }}
-            className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition-colors"
-          >
-            Confirm Predictions
-              </button>
+              className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition-colors"
+            >
+              Confirm Predictions
+            </button>
         </div>
-      </div>
+          </div>
+          
+      {/* Save Predictions Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-slate-900 mb-2">Save Predictions?</div>
+              <div className="text-slate-600 mb-6">
+                Your predictions will be saved but you can still change them before confirming.
+                {fixtures.length > 0 && fixtures[0].kickoff_time && (
+                  <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <div className="text-sm font-medium text-amber-800 mb-1">Deadline Reminder</div>
+                    <div className="text-xs text-amber-700">
+                      {(() => {
+                        const firstKickoff = new Date(fixtures[0].kickoff_time);
+                        const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000));
+                        return deadlineTime.toLocaleString('en-GB', {
+                          weekday: 'short', 
+                          day: 'numeric', 
+                          month: 'short',
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                      })()}
+                    </div>
+                    <div className="text-xs text-amber-600 mt-1">
+                      (75 minutes before first kickoff)
+                    </div>
+                  </div>
+                )}
+                </div>
+              <div className="flex gap-3">
+            <button
+                  onClick={() => setShowSaveModal(false)}
+                  className="flex-1 py-3 bg-slate-200 text-slate-800 rounded-xl font-bold hover:bg-slate-300 transition-colors"
+            >
+                  Cancel
+            </button>
+                <button
+                  onClick={() => {
+                    console.log('Saving picks:', Array.from(picks.entries()));
+                    // TODO: Save picks to database
+                    setShowSaveModal(false);
+                    setShowSuccessModal(true);
+                  }}
+                  className="flex-1 py-3 bg-slate-600 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+                  </div>
+                </div>
+              )}
+              
+      {/* Confirm Predictions Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-slate-900 mb-2">Are You Sure?</div>
+              <div className="text-slate-600 mb-6">
+                Once confirmed, you cannot change your predictions. Make sure you're happy with all your picks!
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1 py-3 bg-slate-200 text-slate-800 rounded-xl font-bold hover:bg-slate-300 transition-colors"
+                >
+                  Go Back
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('Confirming picks:', Array.from(picks.entries()));
+                    // TODO: Submit picks to database
+                    setShowConfirmModal(false);
+                    setShowSuccessModal(true);
+                  }}
+                  className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
+                >
+                  Confirm
+                </button>
+            </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600 mb-2">Predictions Saved!</div>
+              <div className="text-slate-600 mb-6">
+                Your predictions have been saved successfully. Good luck!
+          </div>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
