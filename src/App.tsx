@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useState, useEffect } from "react";
 import SiteHeader from "./components/SiteHeader";
 import PredictionsBanner from "./components/PredictionsBanner";
+import WhatsAppBanner from "./components/WhatsAppBanner";
+
 import HomePage from "./pages/Home";
 import LeaguePage from "./pages/League";
 import PredictionsPage from "./pages/Predictions";
@@ -34,6 +36,7 @@ export default function App() {
         <Route path="*" element={
           <div className={`min-h-screen overflow-y-auto ${oldSchoolMode ? 'oldschool-theme' : 'bg-slate-50 text-slate-900'}`}>
             <SiteHeader />
+            <WhatsAppBanner />
             <PredictionsBanner />
             <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6">
               <Routes>
@@ -46,6 +49,7 @@ export default function App() {
           </div>
         } />
       </Routes>
+      
     </Router>
   );
 }

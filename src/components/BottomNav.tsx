@@ -35,7 +35,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-emerald-600 shadow-lg z-50 safe-area-inset-bottom">
+    <div className="fixed bottom-0 left-0 right-0 bg-[#1C8376] shadow-lg z-50 safe-area-inset-bottom">
       <div className="flex items-center justify-around max-w-md mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -43,10 +43,10 @@ export default function BottomNav() {
             <button
               key={item.name}
               onClick={() => navigate(item.path)}
-              className={`flex-1 flex flex-col items-center justify-center py-5 transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors ${
                 isActive 
                   ? 'text-white' 
-                  : 'text-emerald-100 hover:text-white'
+                  : 'text-white/70 hover:text-white'
               }`}
             >
               <div className={`${isActive ? 'scale-110' : ''} transition-transform`}>

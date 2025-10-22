@@ -3,6 +3,16 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import ClubBadge from "../components/ClubBadge";
 import { useNavigate } from "react-router-dom";
+import { getMediumName } from "../lib/teamNames";
+
+function sideName(f: any, side: "home" | "away") {
+  const nm = f?.[`${side}_name`];
+  const team = f?.[`${side}_team`];
+  const code = f?.[`${side}_code`];
+  const key = code || nm || team || "";
+  const resolved = getMediumName(key);
+  return resolved || (side === "home" ? "Home" : "Away");
+}
 
 type Fixture = {
   id: string;
@@ -52,7 +62,7 @@ function ResultButton({
   const correctPickStyle = correct === true
     ? "bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 text-white !border-0 !border-none shadow-2xl shadow-yellow-400/40 transform scale-110 rotate-1 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s]"
     : isCorrectResult
-    ? "bg-emerald-600 text-white border-emerald-600"
+    ? "bg-[#1C8376] text-white border-[#1C8376]"
     : correct === false
     ? "bg-rose-100 text-rose-700 border-rose-200"
     : "bg-slate-50 text-slate-600 border-slate-200";
@@ -466,8 +476,8 @@ export default function NewPredictionsCentre() {
                           {/* Teams and Time */}
                           <div className="flex items-center justify-between gap-2 mb-4">
                             <div className="flex-1 min-w-0 text-right">
-                              <span className="text-sm font-semibold text-slate-800 truncate inline-block">
-                                {fixture.home_name || fixture.home_team}
+                              <span className="text-xs font-semibold text-slate-800 truncate inline-block">
+                                {sideName(fixture, "home")}
                               </span>
                             </div>
                             
@@ -485,8 +495,8 @@ export default function NewPredictionsCentre() {
                             </div>
                             
                             <div className="flex-1 min-w-0 text-left">
-                              <span className="text-sm font-semibold text-slate-800 truncate inline-block">
-                                {fixture.away_name || fixture.away_team}
+                              <span className="text-xs font-semibold text-slate-800 truncate inline-block">
+                                {sideName(fixture, "away")}
                               </span>
                             </div>
                           </div>
@@ -505,7 +515,7 @@ export default function NewPredictionsCentre() {
                               }}
                               className={`h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center ${
                                 pick?.pick === "H"
-                                  ? "bg-emerald-600 text-white border-emerald-600"
+                                  ? "bg-[#1C8376] text-white border-[#1C8376]"
                                   : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
@@ -524,7 +534,7 @@ export default function NewPredictionsCentre() {
                               }}
                               className={`h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center ${
                                 pick?.pick === "D"
-                                  ? "bg-emerald-600 text-white border-emerald-600"
+                                  ? "bg-[#1C8376] text-white border-[#1C8376]"
                                   : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
@@ -543,7 +553,7 @@ export default function NewPredictionsCentre() {
                               }}
                               className={`h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center ${
                                 pick?.pick === "A"
-                                  ? "bg-emerald-600 text-white border-emerald-600"
+                                  ? "bg-[#1C8376] text-white border-[#1C8376]"
                                   : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
@@ -655,7 +665,7 @@ export default function NewPredictionsCentre() {
               {viewMode === "cards" && (
                 <button
                   onClick={() => setCurrentIndex(fixtures.length)}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                  className="text-sm text-[#1C8376] hover:text-[#1C8376]/80 font-medium"
                 >
                   Skip to List View →
                 </button>
@@ -701,7 +711,7 @@ export default function NewPredictionsCentre() {
               </button>
               <div className="text-center">
                 <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">Predictions Centre</h1>
-                <div className="mt-0 mb-4 text-base text-slate-500">
+                <div className="mt-0 mb-4 text-sm text-slate-600">
                   Call every game, lock in your results,<br />and climb the table.
                 </div>
               </div>
@@ -719,13 +729,13 @@ export default function NewPredictionsCentre() {
 
             {/* Score summary card - matching current predictions page */}
             <div className="mt-2 mb-4">
-              <div className="rounded-xl border bg-gradient-to-r from-emerald-50 to-blue-50 border-emerald-200 px-6 py-4">
+              <div className="rounded-xl border bg-gradient-to-r from-[#1C8376]/10 to-blue-50 border-[#1C8376]/20 px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-emerald-900 font-semibold text-lg">GW {currentGw} Complete</div>
-                    <div className="text-emerald-900 text-sm font-bold mt-1">Your Score</div>
+                    <div className="text-[#1C8376]/90 font-semibold text-lg">GW {currentGw} Complete</div>
+                    <div className="text-[#1C8376]/90 text-sm font-bold mt-1">Your Score</div>
                   </div>
-                  <div className="text-emerald-900 text-5xl font-extrabold">
+                  <div className="text-[#1C8376]/90 text-5xl font-extrabold">
                     {myScore}
                   </div>
                 </div>
@@ -745,8 +755,8 @@ export default function NewPredictionsCentre() {
                     })
                   : "—";
                 
-                const home = fixture.home_name || fixture.home_team || "Home";
-                const away = fixture.away_name || fixture.away_team || "Away";
+                const home = sideName(fixture, "home");
+                const away = sideName(fixture, "away");
                 
                 return (
                   <div

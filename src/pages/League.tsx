@@ -145,7 +145,7 @@ function ChatTab({ chat, userId, nameById, isMember, newMsg, setNewMsg, onSend }
             const time = new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
             return (
               <div key={m.id} className={`mb-2 flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${mine ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-900"}`}>
+                <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${mine ? "bg-[#1C8376] text-white" : "bg-slate-100 text-slate-900"}`}>
                   {!mine && <div className="font-semibold text-xs text-slate-600 mb-1">{name}</div>}
                   <div className="whitespace-pre-wrap break-words">{m.content}</div>
                   <div className={`mt-1 text-[10px] ${mine ? "text-emerald-100" : "text-slate-500"}`}>{time}</div>
@@ -174,7 +174,7 @@ function ChatTab({ chat, userId, nameById, isMember, newMsg, setNewMsg, onSend }
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md disabled:opacity-50"
+                className="px-4 py-2 bg-[#1C8376] text-white font-semibold rounded-md disabled:opacity-50"
                 disabled={!newMsg.trim()}
               >
                 Send
@@ -223,6 +223,8 @@ export default function LeaguePage() {
   const [availableGws, setAvailableGws] = useState<number[]>([]);
   const [showGwDropdown, setShowGwDropdown] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
+  const [showTableModal, setShowTableModal] = useState(false);
+  const [showScoringModal, setShowScoringModal] = useState(false);
 
   const [showInvite, setShowInvite] = useState(false);
   const [showJoinConfirm, setShowJoinConfirm] = useState(false);
@@ -263,7 +265,7 @@ export default function LeaguePage() {
     } else if (gw8StartLeagues.includes(league.name)) {
       leagueStartGw = 8; // Only show from GW8 onwards
     } else {
-      leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
+      leagueStartGw = (currentGw ?? 1) + 1; // Late-starting leagues start from NEXT GW
     }
     
     // For GW Results: only show if there are results for the league's start gameweek or later
@@ -710,7 +712,7 @@ export default function LeaguePage() {
       } else if (gw8StartLeagues.includes(league?.name || '')) {
         leagueStartGw = 8; // Only show from GW8 onwards
       } else {
-        leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
+        leagueStartGw = (currentGw ?? 1) + 1; // Late-starting leagues start from NEXT GW
       }
       const relevantGws = gwsWithResults.filter(gw => gw >= leagueStartGw);
 
@@ -876,7 +878,7 @@ export default function LeaguePage() {
     const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
     const gw7StartLeagues = ['The Bird league'];
     const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
-    const isLateStartingLeague = league && !specialLeagues.includes(league.name) && !gw7StartLeagues.includes(league.name) && !gw8StartLeagues.includes(league.name);
+    const isLateStartingLeague = league && (gw7StartLeagues.includes(league.name) || gw8StartLeagues.includes(league.name));
 
     const rows = mltRows.length
       ? mltRows
@@ -899,7 +901,7 @@ export default function LeaguePage() {
           <p className="text-slate-600 mb-4">Share your league code with friends to get the competition going!</p>
           <button
             onClick={() => setShowInvite(true)}
-            className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+            className="px-4 py-2 bg-[#1C8376] text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
           >
             Share League Code
           </button>
@@ -943,7 +945,7 @@ export default function LeaguePage() {
                         <span className="text-center font-semibold w-8">{r.draws}</span>
                         <span className="text-center font-semibold w-10">{r.ocp}</span>
                         {members.length >= 3 && <span className="text-center font-semibold w-8">{r.unicorns}</span>}
-                        <span className="text-center font-bold text-emerald-600 w-10 pr-2">{r.mltPts}</span>
+                        <span className="text-center font-bold text-[#1C8376] w-10 pr-2">{r.mltPts}</span>
                       </div>
                     )}
                   </div>
@@ -959,27 +961,34 @@ export default function LeaguePage() {
         </div>
 
         <div className="mt-3 flex justify-between items-center">
-          {isLateStartingLeague && (
-            <div className="text-xs text-slate-500">
-              Correct predictions since this Mini League began.
+          <div className="flex items-center justify-between w-full">
+            <div className="inline-flex rounded-lg bg-slate-100 p-1 shadow-sm">
+              <button
+                onClick={() => setShowForm(false)}
+                className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+                  !showForm ? "bg-[#1C8376] text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                }`}
+              >
+                Points
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+                  showForm ? "bg-[#1C8376] text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                }`}
+              >
+                Form
+              </button>
             </div>
-          )}
-          <div className="inline-flex rounded-lg bg-slate-100 p-1 shadow-sm">
             <button
-              onClick={() => setShowForm(false)}
-              className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-                !showForm ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-              }`}
+              onClick={() => {
+                console.log('Button clicked, setting modal to true');
+                setShowTableModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg text-slate-600 hover:text-slate-800 cursor-help transition-colors"
             >
-              Points
-            </button>
-            <button
-              onClick={() => setShowForm(true)}
-              className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-                showForm ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-              }`}
-            >
-              Form
+              <span className="text-sm">📖</span>
+              <span className="text-sm">Rules</span>
             </button>
           </div>
         </div>
@@ -1006,7 +1015,7 @@ export default function LeaguePage() {
     } else if (gw8StartLeagues.includes(league?.name || '')) {
       leagueStartGw = 8; // Only show from GW8 onwards
     } else {
-      leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
+      leagueStartGw = (currentGw ?? 1) + 1; // Late-starting leagues start from NEXT GW
     }
     
     if (!specialLeagues.includes(league?.name || '') && !gw7StartLeagues.includes(league?.name || '') && !gw8StartLeagues.includes(league?.name || '') && picksGw < leagueStartGw) {
@@ -1068,7 +1077,7 @@ export default function LeaguePage() {
         <div className="flex items-center gap-4 text-sm mb-4">
           <div className="text-slate-900 font-bold text-xl">Game Week {picksGw}</div>
           {allSubmitted && resultsPublished ? (
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-sm font-bold border border-emerald-300 shadow-sm">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#1C8376]/10 text-[#1C8376]/90 text-sm font-bold border border-emerald-300 shadow-sm">
               Round Complete!
             </span>
           ) : allSubmitted ? (
@@ -1105,7 +1114,7 @@ export default function LeaguePage() {
                           <td className="px-4 py-3 font-bold text-slate-900">{m.name}</td>
                           <td className="px-4 py-3">
                             {submitted ? (
-                              <span className="inline-flex items-center justify-center rounded-full bg-emerald-100 text-emerald-800 text-xs px-2 py-1 border border-emerald-300 font-bold shadow-sm whitespace-nowrap w-24">
+                              <span className="inline-flex items-center justify-center rounded-full bg-[#1C8376]/10 text-[#1C8376]/90 text-xs px-2 py-1 border border-emerald-300 font-bold shadow-sm whitespace-nowrap w-24">
                                 ✅ Submitted
                               </span>
                             ) : (
@@ -1247,12 +1256,14 @@ export default function LeaguePage() {
             {!sections.length && <div className="rounded-2xl border bg-white shadow-sm p-4 text-slate-500">No fixtures for GW {picksGw}.</div>}
           </div>
         )}
+
       </div>
     );
   }
 
   function GwResultsTab() {
     const resGw = selectedGw;
+    
     if (!resGw) return <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-600">No game week selected.</div>;
 
     // Check if this gameweek is relevant for this league
@@ -1268,7 +1279,7 @@ export default function LeaguePage() {
     } else if (gw8StartLeagues.includes(league?.name || '')) {
       leagueStartGw = 8; // Only show from GW8 onwards
     } else {
-      leagueStartGw = currentGw ?? 1; // Late-starting leagues start from current GW
+      leagueStartGw = (currentGw ?? 1) + 1; // Late-starting leagues start from NEXT GW
     }
     
     // For late-starting leagues, don't show results for gameweeks that ended before the league started
@@ -1342,14 +1353,14 @@ export default function LeaguePage() {
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Player</th>
                 <th className="text-center px-4 py-3 font-semibold text-slate-600">Score</th>
-                {members.length >= 3 && <th className="text-center px-4 py-3 font-semibold text-slate-600">🦄</th>}
+                {members.length >= 3 && <th className="text-center px-4 py-3 font-semibold text-slate-600 text-lg">🦄</th>}
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.user_id} className="border-t border-slate-200">
                   <td className="px-4 py-3 font-bold text-slate-900">{r.name}</td>
-                  <td className="px-4 py-3 text-center font-semibold text-emerald-600">{r.score}</td>
+                  <td className="px-4 py-3 text-center font-semibold text-[#1C8376]">{r.score}</td>
                   {members.length >= 3 && <td className="px-4 py-3 text-center font-semibold">{r.unicorns}</td>}
                 </tr>
               ))}
@@ -1363,9 +1374,49 @@ export default function LeaguePage() {
             </tbody>
           </table>
         </div>
-      </div>
-    );
-  }
+
+        {/* Scoring Modal */}
+        {showScoringModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowScoringModal(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 relative" onClick={(e) => e.stopPropagation()}>
+              {/* Close button */}
+              <button
+                onClick={() => setShowScoringModal(false)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Modal content */}
+              <div className="p-6 pt-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Weekly Winner</h2>
+                
+                <div className="space-y-4">
+                  <div className="bg-[#1C8376]/10 border border-[#1C8376]/20 rounded-lg p-4">
+                    <h3 className="font-semibold text-[#1C8376]/90 mb-3">🏆 How to Win the Week:</h3>
+                    <p className="text-[#1C8376]/80">
+                      The player with the <strong>most correct predictions</strong> wins that gameweek.
+                    </p>
+                  </div>
+
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-purple-800 mb-2">🦄 Unicorn Rule</h3>
+                    <p className="text-purple-700">
+                      In Mini-Leagues with <strong>3 or more players</strong>, if you're the <strong>only person</strong> to correctly predict a
+                      fixture, that's a <strong>🦄 Unicorn</strong>. In ties, the player with most <strong>🦄 Unicorns</strong> wins!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
 
   /* ---------- page chrome ---------- */
   if (loading) {
@@ -1391,7 +1442,7 @@ export default function LeaguePage() {
 
   return (
     <div className={`min-h-screen ${oldSchoolMode ? 'oldschool-theme' : 'bg-slate-50'}`}>
-      <div className="max-w-6xl mx-auto px-4 pt-6 pb-16">
+      <div className="max-w-6xl mx-auto px-4 pt-6 pb-6">
         {/* Header with back link */}
         <div className="mb-6">
           <Link to="/leagues" className="inline-flex items-center text-slate-500 hover:text-slate-700 text-sm mb-3">
@@ -1399,70 +1450,11 @@ export default function LeaguePage() {
           </Link>
 
           <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mt-0 mb-6">
               {league.name}
             </h1>
 
-            <div className="mt-0 mb-6 text-base text-slate-500">
-              Code: <span className="font-mono font-semibold">{league.code}</span> · {members.length}/{MAX_MEMBERS} member{members.length === 1 ? "" : "s"}
-            </div>
-
-            {isAdmin && (
-              <div className="mb-4 text-sm text-slate-600 flex justify-center items-center">
-                Admin: <span className="font-semibold text-slate-800">{adminName}</span>
-                <button
-                  onClick={() => setShowAdminMenu(!showAdminMenu)}
-                  className="ml-2 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
-                >
-                  ⚙️ Manage
-                </button>
-              </div>
-            )}
-
-            {isAdmin && showAdminMenu && (
-              <div className="mb-4 bg-white border border-slate-200 rounded-lg shadow-lg p-4 w-full max-w-4xl mx-auto">
-                <h3 className="font-semibold text-slate-900 mb-3">League Management</h3>
-
-                <div className="space-y-2">
-                  <div className="text-sm text-slate-600 mb-3">Remove Members:</div>
-                  {members
-                    .filter((m) => m.id !== user?.id)
-                    .map((member) => (
-                      <div key={member.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-md">
-                        <span className="text-sm font-medium text-slate-800">{member.name}</span>
-                        <button
-                          onClick={() => {
-                            setMemberToRemove(member);
-                            setShowRemoveConfirm(true);
-                            setShowAdminMenu(false);
-                          }}
-                          className="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-
-                  {members.filter((m) => m.id !== user?.id).length === 0 && (
-                    <div className="text-sm text-slate-500 italic py-2">No other members to remove</div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-200">
-                  <button
-                    onClick={() => {
-                      setShowEndLeagueConfirm(true);
-                      setShowAdminMenu(false);
-                    }}
-                    className="w-full px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors"
-                  >
-                    🗑️ End League
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
+            <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap mb-6">
               <button
                 onClick={() => setShowInvite(true)}
                 className="px-2 sm:px-3 py-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors text-xs sm:text-sm font-medium"
@@ -1506,7 +1498,7 @@ export default function LeaguePage() {
               onClick={() => setTab("chat")}
               className={
                 "flex-1 px-3 sm:px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
-                (tab === "chat" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+                (tab === "chat" ? "bg-[#1C8376] text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
               Chat
@@ -1517,11 +1509,11 @@ export default function LeaguePage() {
                 onClick={() => setTab("gwr")}
                 className={
                   "flex-1 px-2 sm:px-4 py-3 rounded-md text-xs font-semibold transition-colors leading-tight " +
-                  (tab === "gwr" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+                  (tab === "gwr" ? "bg-[#1C8376] text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
                 }
               >
-                <span className="hidden sm:inline">{selectedGw ? `GW ${selectedGw} Results` : "GW Results"}</span>
-                <span className="sm:hidden whitespace-pre-line">{selectedGw ? `GW${selectedGw}\nResults` : "GW\nResults"}</span>
+                <span className="hidden sm:inline">{selectedGw ? `GW ${selectedGw} Results` : (currentGw ? `GW ${currentGw} Results` : "GW Results")}</span>
+                <span className="sm:hidden whitespace-pre-line">{selectedGw ? `GW${selectedGw}\nResults` : (currentGw ? `GW${currentGw}\nResults` : "GW\nResults")}</span>
               </button>
             )}
             {/* Only show GW Predictions tab for special leagues or if current GW is >= league start */}
@@ -1530,7 +1522,7 @@ export default function LeaguePage() {
                 onClick={() => setTab("gw")}
                 className={
                   "flex-1 px-2 sm:px-4 py-3 rounded-md text-xs font-semibold transition-colors leading-tight " +
-                  (tab === "gw" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+                  (tab === "gw" ? "bg-[#1C8376] text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
                 }
               >
                 <span className="hidden sm:inline">{currentGw ? `GW ${currentGw} Predictions` : "GW Predictions"}</span>
@@ -1541,7 +1533,7 @@ export default function LeaguePage() {
               onClick={() => setTab("mlt")}
               className={
                 "flex-1 px-3 sm:px-6 py-3 rounded-md text-sm font-semibold transition-colors " +
-                (tab === "mlt" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
+                (tab === "mlt" ? "bg-[#1C8376] text-white shadow-sm" : "text-slate-600 hover:text-slate-900 hover:bg-white/50")
               }
             >
               Table
@@ -1566,9 +1558,10 @@ export default function LeaguePage() {
           {tab === "gwr" && <GwResultsTab />}
         </div>
 
+
         {/* Game Week Switcher for Results */}
         {tab === "gwr" && availableGws.length > 0 && (
-          <div className="mt-6 flex items-center justify-center">
+          <div className="mt-6 flex items-center justify-between">
             <div className="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-4 py-2 shadow-sm">
               <span className="text-sm font-medium text-slate-600">Game Week:</span>
               <div className="relative gw-dropdown-container">
@@ -1606,9 +1599,158 @@ export default function LeaguePage() {
                 )}
               </div>
             </div>
+            
+            {/* Rules Button */}
+            <button
+              onClick={() => setShowScoringModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg text-slate-600 hover:text-slate-800 cursor-help transition-colors"
+            >
+              <span className="text-sm">📖</span>
+              <span className="text-sm">Rules</span>
+            </button>
           </div>
         )}
+
+        {/* Code/Members and Admin Section - show on all tabs */}
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <div className="text-sm text-slate-600">
+            Code: <span className="font-mono font-semibold">{league.code}</span> · {members.length}/{MAX_MEMBERS} member{members.length === 1 ? "" : "s"}
+          </div>
+          {isAdmin && (
+            <div className="text-sm text-slate-600 flex justify-center items-center">
+              Admin: <span className="font-semibold text-slate-800">{adminName}</span>
+              <button
+                onClick={() => setShowAdminMenu(!showAdminMenu)}
+                className="ml-2 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+              >
+                ⚙️ Manage
+              </button>
+            </div>
+          )}
+        </div>
+
       </div>
+
+      {/* Admin Menu Modal */}
+      {isAdmin && showAdminMenu && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowAdminMenu(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 relative" onClick={(e) => e.stopPropagation()}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowAdminMenu(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Modal content */}
+            <div className="p-6 pt-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">League Management</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm text-slate-600 mb-3 font-semibold">Remove Members:</h3>
+                  <div className="space-y-2">
+                    {members
+                      .filter((m) => m.id !== user?.id)
+                      .map((member) => (
+                        <div key={member.id} className="flex items-center justify-between py-3 px-4 bg-slate-50 rounded-lg">
+                          <span className="text-sm font-medium text-slate-800">{member.name}</span>
+                          <button
+                            onClick={() => {
+                              setMemberToRemove(member);
+                              setShowRemoveConfirm(true);
+                              setShowAdminMenu(false);
+                            }}
+                            className="px-3 py-1.5 text-xs bg-red-100 text-red-700 hover:bg-red-200 rounded-md transition-colors font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+
+                    {members.filter((m) => m.id !== user?.id).length === 0 && (
+                      <div className="text-sm text-slate-500 italic py-4 text-center">No other members to remove</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-200">
+                  <button
+                    onClick={() => {
+                      setShowEndLeagueConfirm(true);
+                      setShowAdminMenu(false);
+                    }}
+                    className="w-full px-4 py-3 text-sm bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                  >
+                    🗑️ End League
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Table Modal */}
+      {showTableModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowTableModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 relative" onClick={(e) => e.stopPropagation()}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowTableModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Modal content */}
+            <div className="p-6 pt-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">League Points</h2>
+              
+              <div className="space-y-4">
+                <div className="bg-[#1C8376]/10 border border-[#1C8376]/20 rounded-lg p-4">
+                  <h3 className="font-semibold text-[#1C8376]/90 mb-3">League Points:</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[#1C8376] font-bold">■</span>
+                      <span className="text-[#1C8376]/80"><strong>Win the week</strong> – 3 points</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[#1C8376] font-bold">■</span>
+                      <span className="text-[#1C8376]/80"><strong>Draw</strong> – 1 point</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[#1C8376] font-bold">■</span>
+                      <span className="text-[#1C8376]/80"><strong>Lose</strong> – 0 points</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-800 mb-2">🤝 Ties</h3>
+                  <p className="text-blue-700">
+                    If two or more players are tied on Points, the player with the most overall <strong>🦄 Unicorns</strong> in the mini league is ranked higher.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Late starting league explanation */}
+              {league && (['The Bird league'].includes(league.name) || ['gregVjofVcarl', 'Let Down'].includes(league.name)) && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-blue-700 text-sm">
+                    <strong>Note:</strong> This mini league started after GW1, so the "CP" column shows correct predictions since this mini league began.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invite Modal */}
       {showInvite && (
@@ -1686,7 +1828,7 @@ export default function LeaguePage() {
               </button>
               <button
                 onClick={joinLeague}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-[#1C8376] text-white rounded-md hover:bg-emerald-700 transition-colors disabled:opacity-50"
                 disabled={joining}
               >
                 {joining ? "Joining..." : "Join League"}

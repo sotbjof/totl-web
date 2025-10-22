@@ -236,8 +236,8 @@ export default function GlobalLeaderboardPage() {
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-3xl px-4 pt-6 pb-16">
         <div className="text-center">
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">Leaderboard</h1>
-          <div className="mt-0 mb-6 text-base text-slate-500">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">Leaderboard</h1>
+          <div className="mt-0 mb-6 text-sm text-slate-600">
             See how you rank against every<br />TotL player in the world.
           </div>
         </div>
@@ -245,16 +245,6 @@ export default function GlobalLeaderboardPage() {
         {/* Tabs */}
         <div className="flex justify-center mb-6">
           <div className="flex rounded-lg bg-slate-100 p-1">
-            <button
-              onClick={() => setActiveTab("overall")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === "overall"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Overall
-            </button>
             <button
               onClick={() => setActiveTab("lastgw")}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -284,6 +274,16 @@ export default function GlobalLeaderboardPage() {
               }`}
             >
               10 Week
+            </button>
+            <button
+              onClick={() => setActiveTab("overall")}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === "overall"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Overall
             </button>
           </div>
         </div>

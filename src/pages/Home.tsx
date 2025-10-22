@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import { getMediumName } from "../lib/teamNames";
+import WhatsAppBanner from "../components/WhatsAppBanner";
 
 // Types
 type League = { id: string; name: string; code: string };
@@ -531,7 +532,7 @@ export default function HomePage() {
     } else if (correct === false) {
       return <span className="inline-block h-5 w-5 rounded-full bg-red-500 border-2 border-white shadow ring-1 ring-red-300" />;
     } else {
-      return <span className="inline-block h-5 w-5 rounded-full bg-emerald-500 border-2 border-white shadow ring-1 ring-emerald-300" />;
+      return <span className="inline-block h-5 w-5 rounded-full bg-[#1C8376] border-2 border-white shadow ring-1 ring-emerald-300" />;
     }
   };
 
@@ -546,7 +547,7 @@ export default function HomePage() {
     compactFooter?: boolean;
   }> = ({ title, icon, subtitle, footerLeft, footerRight, className, to, compactFooter }) => {
     const inner = (
-      <div className={"h-full rounded-3xl border-2 border-emerald-200 bg-emerald-50/50 p-4 sm:p-6 " + (className ?? "")}>
+      <div className={"h-full rounded-3xl border-2 border-[#1C8376]/20 bg-slate-50/80 p-4 sm:p-6 " + (className ?? "")}>
         <div className="flex items-start gap-3">
           <div className={"rounded-full bg-white shadow-inner flex items-center justify-center flex-shrink-0 " + (compactFooter ? "h-12 w-12 sm:h-14 sm:w-14" : "h-14 w-14 sm:h-16 sm:w-16")}>
             {icon}
@@ -555,13 +556,13 @@ export default function HomePage() {
         <div className="mt-2">
           <div className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 whitespace-nowrap">{title}</div>
           {subtitle && (
-            <div className="text-sm font-bold text-emerald-600 mt-1">
+            <div className="text-sm font-bold text-[#1C8376] mt-1">
               {subtitle}
             </div>
           )}
         </div>
         {(footerLeft || footerRight) && (
-          <div className="mt-3 flex items-center gap-3 text-emerald-700">
+          <div className="mt-3 flex items-center gap-3 text-[#1C8376]">
             {footerLeft && (
               <div className={"flex items-center gap-1 " + (compactFooter ? "text-sm sm:text-base" : "text-lg sm:text-xl")}>
                 {footerLeft}
@@ -589,12 +590,12 @@ export default function HomePage() {
   const GWCard: React.FC<{ gw: number; score: number | null; submitted: boolean; }> = ({ gw, score, submitted }) => {
     const display = score !== null ? score : (submitted ? 0 : NaN);
     return (
-      <div className="h-full rounded-3xl border-2 border-emerald-200 bg-emerald-50/50 p-4 sm:p-6 relative flex items-center justify-center">
+      <div className="h-full rounded-3xl border-2 border-[#1C8376]/20 bg-amber-50/60 p-4 sm:p-6 relative flex items-center justify-center">
         {/* Corner badges */}
-        <div className="absolute top-4 left-4 text-emerald-700 text-sm sm:text-base font-semibold">
+        <div className="absolute top-4 left-4 text-[#1C8376] text-sm sm:text-base font-semibold">
           GW{gw}
         </div>
-        <div className="absolute bottom-4 left-4 text-emerald-700 text-sm sm:text-base font-semibold">
+        <div className="absolute bottom-4 left-4 text-[#1C8376] text-sm sm:text-base font-semibold">
           Last week's score
         </div>
         {/* Big score */}
@@ -611,6 +612,7 @@ export default function HomePage() {
 
   return (
     <div className={`max-w-6xl mx-auto px-4 py-4 min-h-screen ${oldSchoolMode ? 'oldschool-theme' : ''}`}>
+      <WhatsAppBanner />
       {/* Leaderboards */}
       <Section title="Leaderboards" boxed={false}>
         <div className="grid grid-cols-2 gap-4">
@@ -618,7 +620,7 @@ export default function HomePage() {
             to="/global"
             title="TotL Global"
             icon={
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-emerald-600">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-[#1C8376]">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
               </svg>
             }
@@ -664,7 +666,7 @@ export default function HomePage() {
           {leagues.length > 4 && (
             <Link
               to="/tables"
-              className="text-emerald-600 font-semibold text-sm hover:text-emerald-700 no-underline"
+              className="text-[#1C8376] font-semibold text-sm hover:text-[#1C8376] no-underline"
             >
               Show All
             </Link>
@@ -678,7 +680,7 @@ export default function HomePage() {
               <div className="text-slate-600 mb-3">You don't have any mini leagues yet.</div>
               <Link 
                 to="/leagues" 
-                className="inline-block px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors no-underline"
+                className="inline-block px-4 py-2 bg-[#1C8376] text-white font-semibold rounded-lg hover:bg-[#1C8376]/80 transition-colors no-underline"
               >
                 Create one now!
               </Link>
@@ -707,14 +709,14 @@ export default function HomePage() {
                                       {l.name}
                                     </div>
                                     {leagueSubmissions[l.id] && (
-                                      <div className="text-xs text-emerald-600 font-bold mt-0.5">
+                                      <div className="text-xs text-[#1C8376] font-bold mt-0.5">
                                         All Submitted
                                       </div>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     {badge > 0 && (
-                                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-600 text-white text-xs font-bold">
+                                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-[#1C8376] text-white text-xs font-bold">
                                         {badge}
                                       </span>
                                     )}
@@ -753,11 +755,6 @@ export default function HomePage() {
           <div className="flex justify-between items-center">
             <span>Game Week {gw}</span>
           </div>
-          {gwScore !== null ? (
-            <div className="mt-1">
-              <span className="font-extrabold text-emerald-600 text-xl">Score {gwScore}</span>
-            </div>
-          ) : null}
           {nextGwComing ? (
             <div className="mt-1">
               <span className="font-semibold">GW{nextGwComing} coming soon</span>

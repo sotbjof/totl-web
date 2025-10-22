@@ -53,11 +53,11 @@ function AppContent({ menuOpen, setMenuOpen }: {
 
       {/* Site Header */}
       {!isFullScreenPage && <header className="sticky top-0 z-50 text-white shadow">
-        <div className="bg-emerald-600">
-          <div className="max-w-6xl mx-auto px-4 h-24 sm:h-28 flex items-center gap-6">
+        <div className="bg-[#1C8376]">
+          <div className="max-w-6xl mx-auto px-4 h-20 sm:h-24 flex items-center gap-6">
                  <Link to="/" className="flex items-center no-underline gap-3">
-                   <img src="/assets/badges/totl-logo1.svg" alt="TOTL" className="h-20 sm:h-26 w-auto" />
-                   <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded">BETA</span>
+                   <img src="/assets/badges/totl-logo1.svg" alt="TOTL" className="h-14 sm:h-18 w-auto" />
+                   <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded">BETA V1.1</span>
                  </Link>
 
             {/* Desktop nav */}
@@ -153,15 +153,15 @@ function AppContent({ menuOpen, setMenuOpen }: {
 
       {/* Welcome Message */}
       {showWelcome && (
-        <div className="fixed top-40 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-600 text-white px-8 py-5 rounded-lg shadow-lg w-11/12 max-w-4xl">
+        <div className="fixed top-40 left-1/2 transform -translate-x-1/2 z-50 bg-[#1C8376] text-white px-8 py-5 rounded-lg shadow-lg w-11/12 max-w-4xl">
           <div className="relative">
             <div className="text-center pr-10">
               <div className="font-bold text-xl">Welcome to TOTL!</div>
-              <div className="text-sm text-emerald-100 mt-1">Your account is now active. Start making predictions!</div>
+              <div className="text-sm text-[#1C8376]/80 mt-1">Your account is now active. Start making predictions!</div>
             </div>
             <button
               onClick={dismissWelcome}
-              className="absolute top-0 right-0 text-emerald-200 hover:text-white text-2xl font-bold"
+              className="absolute top-0 right-0 text-[#1C8376]/60 hover:text-white text-2xl font-bold"
               aria-label="Dismiss"
             >
               ×

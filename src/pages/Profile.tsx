@@ -93,16 +93,16 @@ export default function Profile() {
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
           <div className="flex items-center gap-6">
             {/* Avatar */}
-            <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+            <div className="w-16 h-16 bg-[#1C8376] rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
               {(user.user_metadata?.display_name || user.email || 'U')[0].toUpperCase()}
             </div>
             
             {/* User Info */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h1 className="text-3xl font-bold text-slate-800 mb-2">
                 {user.user_metadata?.display_name || 'User'}
               </h1>
-              <p className="text-slate-600">{user.email}</p>
+              <p className="text-slate-600 break-all">{user.email}</p>
               <p className="text-sm text-slate-500 mt-2">
                 Member since {new Date(user.created_at || '').toLocaleDateString('en-GB', { 
                   month: 'long', 
@@ -121,7 +121,7 @@ export default function Profile() {
             <div className="grid grid-cols-2 gap-4 mb-6">
               {/* OCP */}
               <div className="bg-white rounded-xl shadow-md p-6 flex flex-col items-center justify-center">
-                <div className="text-4xl font-bold text-emerald-600 mb-2">
+                <div className="text-4xl font-bold text-[#1C8376] mb-2">
                   {stats?.totalPoints || 0}
                 </div>
                 <div className="text-sm text-slate-600 font-medium">OCP</div>
@@ -136,7 +136,7 @@ export default function Profile() {
                         <div className="text-xs text-slate-400 mt-1">
                           of {stats?.totalUsers || 0}
                           {stats && stats.globalRank > 0 && stats.totalUsers > 0 && (
-                            <span className="block mt-1 text-emerald-600 font-semibold">
+                            <span className="block mt-1 text-[#1C8376] font-semibold">
                               Top {Math.round((stats.globalRank / stats.totalUsers) * 100)}%
                             </span>
                           )}
@@ -150,20 +150,20 @@ export default function Profile() {
                 <h2 className="text-xl font-bold text-slate-800 mb-4">Prediction Accuracy</h2>
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-slate-600">
-                    <span className="text-3xl font-bold text-emerald-600">{stats.correctPredictions}</span>
+                    <span className="text-3xl font-bold text-[#1C8376]">{stats.correctPredictions}</span>
                     <span className="text-slate-500"> / {stats.totalPredictions}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-emerald-600">
+                    <div className="text-3xl font-bold text-[#1C8376]">
                       {((stats.correctPredictions / stats.totalPredictions) * 100).toFixed(1)}%
                     </div>
                     <div className="text-xs text-slate-500">accuracy rate</div>
                   </div>
                 </div>
-                <div className="overflow-hidden h-4 text-xs flex rounded-full bg-emerald-200">
+                <div className="overflow-hidden h-4 text-xs flex rounded-full bg-[#1C8376]/20">
                   <div
                     style={{ width: `${(stats.correctPredictions / stats.totalPredictions) * 100}%` }}
-                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-emerald-600 transition-all duration-500"
+                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-[#1C8376] transition-all duration-500"
                   ></div>
                 </div>
               </div>
@@ -186,9 +186,9 @@ export default function Profile() {
             </div>
 
             <div className="flex items-center justify-between py-3 border-b border-slate-200">
-              <div>
+              <div className="flex-1 min-w-0">
                 <div className="font-medium text-slate-800">Email</div>
-                <div className="text-sm text-slate-600">{user.email}</div>
+                <div className="text-sm text-slate-600 break-all">{user.email}</div>
               </div>
             </div>
 
