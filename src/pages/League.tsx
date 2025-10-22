@@ -45,14 +45,6 @@ async function getLeagueStartGw(league: any, currentGw: number): Promise<number>
           const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000)); // 75 minutes before
           const leagueCreatedAt = new Date(league.created_at);
           
-          console.log('League deadline check:', {
-            leagueName: league?.name,
-            latestCompletedGw,
-            firstKickoff: firstKickoff.toISOString(),
-            deadlineTime: deadlineTime.toISOString(),
-            leagueCreatedAt: leagueCreatedAt.toISOString(),
-            createdBeforeDeadline: leagueCreatedAt <= deadlineTime
-          });
           
           if (leagueCreatedAt <= deadlineTime) {
             return latestCompletedGw; // Created before deadline - include completed GW
@@ -793,16 +785,12 @@ export default function LeaguePage() {
       // Special leagues that should include all historical data (start from GW0)
       const specialLeagues = ['Prem Predictions', 'FC Football', 'Easy League'];
       const gw7StartLeagues = ['The Bird league'];
-      const gw8StartLeagues = ['gregVjofVcarl', 'Let Down'];
       
       const leagueStartGw = await getLeagueStartGw(league, currentGw);
       const relevantGws = gwsWithResults.filter(gw => gw >= leagueStartGw);
 
-      console.log('Table calculation for league:', league?.name, 'leagueStartGw:', leagueStartGw, 'relevantGws:', relevantGws);
-
       // For late-starting leagues, if there are no results for the start gameweek or later, show empty table
       if (!specialLeagues.includes(league?.name || '') && !gw7StartLeagues.includes(league?.name || '') && relevantGws.length === 0) {
-        console.log('Showing empty table for late-starting league:', league?.name);
         setMltRows(
           members.map((m) => ({
             user_id: m.id,
@@ -825,8 +813,6 @@ export default function LeaguePage() {
         .in("user_id", members.map((m) => m.id))
         .in("gw", relevantGws);
       const picksAll = (pk as PickRow[]) ?? [];
-      
-      console.log('Picks fetched for relevantGws:', relevantGws, 'picks:', picksAll.length);
 
       type GwScore = { user_id: string; score: number; unicorns: number };
       const perGw = new Map<number, Map<string, GwScore>>();
