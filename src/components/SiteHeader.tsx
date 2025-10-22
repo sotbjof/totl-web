@@ -31,14 +31,14 @@ export default function SiteHeader() {
     <header className="relative">
       {/* Gradient bar */}
       <div className="bg-gradient-to-r from-violet-700 via-fuchsia-600 to-rose-500 text-white">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-2 sm:gap-4">
           {/* Brand */}
           <Link to="/" className="font-bold tracking-wide text-lg sm:text-xl select-none flex-shrink-0">TOTL</Link>
 
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-1 flex-1 justify-center">
             <Item to="/leagues">Mini Leagues</Item>
-            <Item to="/predictions">Predictions</Item>
+            <Item to="/new-predictions">Predictions</Item>
             <Item to="/global">Global</Item>
             {isAdmin && <Item to="/admin">Admin</Item>}
           </nav>
@@ -86,8 +86,18 @@ export default function SiteHeader() {
               </div>
             </div>
             
+            <a
+              href="https://chat.whatsapp.com/G2siRAr22kR2tOAcYAkLTp"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMenuOpen(false)}
+              className="px-3 py-2 rounded hover:bg-green-50 transition-colors text-green-600 hover:text-green-700 flex items-center gap-2"
+            >
+              <span>📱</span>
+              Join WhatsApp Community
+            </a>
             <Item to="/leagues">Mini Leagues</Item>
-            <Item to="/predictions">Predictions</Item>
+            <Item to="/new-predictions">Predictions</Item>
             <Item to="/global">Global</Item>
             {isAdmin && <Item to="/admin">Admin</Item>}
             

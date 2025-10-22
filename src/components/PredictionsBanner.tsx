@@ -85,23 +85,37 @@ export default function PredictionsBanner() {
           return;
         }
 
-        // Fixtures exist, no results - check if user has submitted
-        // Check if user has submitted
+        // Fixtures exist, no results - check if user has submitted predictions
+        // Check if user has submitted predictions for all fixtures
         if (!user?.id) {
           setVisible(false);
           return;
         }
 
-        const { data: sub } = await supabase
-          .from("gw_submissions")
-          .select("user_id")
+        // Get all fixtures for current GW
+        const { data: allFixtures } = await supabase
+          .from("fixtures")
+          .select("fixture_index")
+          .eq("gw", gw);
+        
+        if (!allFixtures || allFixtures.length === 0) {
+          setVisible(false);
+          return;
+        }
+
+        // Check if user has picks for all fixtures
+        const { data: picks } = await supabase
+          .from("picks")
+          .select("fixture_index")
           .eq("user_id", user.id)
-          .eq("gw", gw)
-          .maybeSingle();
+          .eq("gw", gw);
+        
         if (!alive) return;
 
-        if (!sub) {
-          // User hasn't submitted - show predictions banner
+        const hasAllPicks = picks && picks.length === allFixtures.length;
+        
+        if (!hasAllPicks) {
+          // User hasn't submitted all predictions - show predictions banner
           setBannerType("predictions");
           setVisible(true);
         } else {
@@ -157,7 +171,7 @@ export default function PredictionsBanner() {
     <div className="mx-auto max-w-6xl px-4">
       {bannerType === "predictions" ? (
         <Link
-          to="/predictions"
+          to="/new-predictions"
           className="block mt-4 rounded-lg bg-blue-600 px-4 py-3 hover:bg-blue-700 transition-colors"
         >
           <div className="text-center">
@@ -175,7 +189,7 @@ export default function PredictionsBanner() {
           </div>
         </Link>
       ) : (
-        <div className="mt-4 rounded-lg bg-slate-100 px-4 py-3 border border-slate-200">
+        <div className="mt-4 rounded-lg bg-slate-100 px-4 py-2 border border-slate-200">
           <div className="text-center">
             <div className="font-semibold text-slate-800">GW{(currentGw || 1) + 1} Coming Soon</div>
             <div className="text-sm text-slate-600">Fixtures will be published soon.</div>

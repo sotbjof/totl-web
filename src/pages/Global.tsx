@@ -24,7 +24,7 @@ export default function GlobalLeaderboardPage() {
   const [overall, setOverall] = useState<OverallRow[]>([]);
   const [gwPoints, setGwPoints] = useState<GwPointsRow[]>([]);
   const [prevOcp, setPrevOcp] = useState<Record<string, number>>({});
-  const [activeTab, setActiveTab] = useState<"overall" | "form5" | "form10">("overall");
+  const [activeTab, setActiveTab] = useState<"overall" | "form5" | "form10" | "lastgw">("overall");
 
   useEffect(() => {
     let alive = true;
@@ -173,6 +173,34 @@ export default function GlobalLeaderboardPage() {
   
   // 10 Week Form leaderboard
   const form10Rows = useMemo(() => createFormRows(10), [createFormRows]);
+  
+  // Last GW leaderboard - only players who completed the last gameweek
+  const lastGwRows = useMemo(() => {
+    if (!latestGw) return [];
+    
+    const lastGwPoints = gwPoints.filter(gp => gp.gw === latestGw);
+    const userMap = new Map(overall.map(o => [o.user_id, o.name ?? "User"]));
+    
+    const sorted = lastGwPoints
+      .map(gp => ({
+        user_id: gp.user_id,
+        name: userMap.get(gp.user_id) ?? "User",
+        points: gp.points,
+      }))
+      .sort((a, b) => (b.points - a.points) || a.name.localeCompare(b.name));
+    
+    // Add joint ranking
+    let currentRank = 1;
+    return sorted.map((player, index) => {
+      if (index > 0 && sorted[index - 1].points !== player.points) {
+        currentRank = index + 1;
+      }
+      return {
+        ...player,
+        rank: currentRank,
+      };
+    });
+  }, [gwPoints, latestGw, overall]);
 
   const rows = useMemo(() => {
     // Get current GW points only for the Overall tab
@@ -208,8 +236,8 @@ export default function GlobalLeaderboardPage() {
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-3xl px-4 pt-6 pb-16">
         <div className="text-center">
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">Leaderboard</h1>
-          <div className="mt-0 mb-6 text-base text-slate-500">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mt-0 mb-2">Leaderboard</h1>
+          <div className="mt-0 mb-6 text-sm text-slate-600">
             See how you rank against every<br />TotL player in the world.
           </div>
         </div>
@@ -218,14 +246,14 @@ export default function GlobalLeaderboardPage() {
         <div className="flex justify-center mb-6">
           <div className="flex rounded-lg bg-slate-100 p-1">
             <button
-              onClick={() => setActiveTab("overall")}
+              onClick={() => setActiveTab("lastgw")}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === "overall"
+                activeTab === "lastgw"
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Overall
+              Last GW
             </button>
             <button
               onClick={() => setActiveTab("form5")}
@@ -246,6 +274,16 @@ export default function GlobalLeaderboardPage() {
               }`}
             >
               10 Week
+            </button>
+            <button
+              onClick={() => setActiveTab("overall")}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === "overall"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Overall
             </button>
           </div>
         </div>
@@ -278,6 +316,14 @@ export default function GlobalLeaderboardPage() {
             )}
           </div>
         )}
+        
+        {activeTab === "lastgw" && (
+          <div className="text-center mb-6">
+            <div className="text-sm text-slate-600">
+              Showing all players who completed GW{latestGw}
+            </div>
+          </div>
+        )}
 
         {err && (
           <div className="mb-6 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
@@ -301,7 +347,7 @@ export default function GlobalLeaderboardPage() {
               Complete 10 game weeks in a row to unlock the 10 Week Form Leaderboard and see who's in the best form!
             </div>
           </div>
-        ) : (activeTab === "overall" ? rows : activeTab === "form5" ? form5Rows : form10Rows).length === 0 ? (
+        ) : (activeTab === "overall" ? rows : activeTab === "form5" ? form5Rows : activeTab === "form10" ? form10Rows : lastGwRows).length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">
             No leaderboard data yet.
           </div>
@@ -321,13 +367,24 @@ export default function GlobalLeaderboardPage() {
                   {(activeTab === "form5" || activeTab === "form10") && (
                     <th className="px-4 py-3 text-center font-semibold">Form Points</th>
                   )}
+                  {activeTab === "lastgw" && (
+                    <th className="px-4 py-3 text-center font-semibold">GW{latestGw}</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {(activeTab === "overall" ? rows : activeTab === "form5" ? form5Rows : form10Rows).map((r, i) => {
+                {(activeTab === "overall" ? rows : activeTab === "form5" ? form5Rows : activeTab === "form10" ? form10Rows : lastGwRows).map((r, i, arr) => {
                   const isMe = r.user_id === user?.id;
                   const zebra = isMe ? "" : (i % 2 === 0 ? "bg-white" : "bg-slate-50");
                   const highlight = isMe ? "bg-emerald-200" : "";
+
+                  // Check if this rank has multiple players
+                  const currentRank = 'rank' in r ? r.rank : i + 1;
+                  const rankCount = arr.filter((item, index) => {
+                    const itemRank = 'rank' in item ? item.rank : index + 1;
+                    return itemRank === currentRank;
+                  }).length;
+                  const isTied = rankCount > 1;
 
                   let indicator = "";
                   let indicatorClass = "bg-gray-300"; // default (no change)
@@ -367,7 +424,7 @@ export default function GlobalLeaderboardPage() {
                   return (
                     <tr key={r.user_id} className={`border-t border-slate-200 ${zebra} ${highlight}`}>
                       {/* Rank number only */}
-                      <td className="px-2 py-3 text-left tabular-nums whitespace-nowrap">{i + 1}</td>
+                      <td className="px-2 py-3 text-left tabular-nums whitespace-nowrap">{currentRank}{isTied ? '=' : ''}</td>
 
                       {/* Player name with color-coded indicator */}
                       <td className="px-4 py-3">
@@ -398,6 +455,11 @@ export default function GlobalLeaderboardPage() {
                       {/* Form tab columns (both 5 Week and 10 Week) */}
                       {(activeTab === "form5" || activeTab === "form10") && (
                         <td className="px-4 py-3 text-center font-bold">{'formPoints' in r ? r.formPoints : 0}</td>
+                      )}
+                      
+                      {/* Last GW tab column */}
+                      {activeTab === "lastgw" && (
+                        <td className="px-4 py-3 text-center font-bold tabular-nums">{'points' in r ? r.points : 0}</td>
                       )}
                     </tr>
                   );

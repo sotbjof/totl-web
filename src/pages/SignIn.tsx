@@ -64,12 +64,6 @@ export default function SignIn() {
           setMode('password-reset');
           return;
         }
-        
-        // Fallback: if user is signed in and on auth page, assume it's password reset
-        // This handles cases where URL parameters are cleaned up
-        console.log('User signed in on auth page, assuming password reset');
-        setMode('password-reset');
-        return;
       }
     };
     checkPasswordReset();
