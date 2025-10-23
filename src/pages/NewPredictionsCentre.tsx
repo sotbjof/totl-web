@@ -318,13 +318,9 @@ export default function NewPredictionsCentre() {
                 {(() => {
                   const firstKickoff = new Date(fixtures[0].kickoff_time);
                   const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000));
-                  return deadlineTime.toLocaleString('en-GB', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
+                  const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
+                  const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
+                  return `${hours}:${minutes}`;
                 })()}
                 </div>
                 <div className="text-xs text-slate-500 mt-1">
@@ -388,13 +384,9 @@ export default function NewPredictionsCentre() {
                       {(() => {
                         const firstKickoff = new Date(fixtures[0].kickoff_time);
                         const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000));
-                        return deadlineTime.toLocaleString('en-GB', {
-                          weekday: 'short', 
-                          day: 'numeric', 
-                          month: 'short',
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                        });
+                        const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
+                        const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
+                        return `${hours}:${minutes}`;
                       })()}
                     </div>
                     <div className="text-xs text-amber-600 mt-1">
