@@ -1187,12 +1187,10 @@ export default function LeaguePage() {
               <div>
                 Waiting for <span className="font-semibold">{remaining}</span> of {members.length} to submit.
               </div>
+              {/* Share reminder button */}
               <button
                 onClick={() => {
-                  const notSubmitted = members
-                    .filter(m => !submittedMap.get(`${m.id}:${picksGw}`))
-                    .map(m => m.name);
-                  
+                  // Generate share message
                   const message = `Game Week ${picksGw} Predictions Reminder!\n\nDEADLINE: THIS ${(() => {
                     const firstKickoff = new Date(fixtures.find(f => f.gw === picksGw)?.kickoff_time || '');
                     const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000));
