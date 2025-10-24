@@ -48,6 +48,12 @@ export default function NewPredictionsCentre() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isPastDeadline, setIsPastDeadline] = useState(false);
+
+  // Debug: Log when isPastDeadline changes
+  useEffect(() => {
+    console.log('isPastDeadline state changed to:', isPastDeadline);
+  }, [isPastDeadline]);
 
   // Load current gameweek data from database
   useEffect(() => {
@@ -81,6 +87,36 @@ export default function NewPredictionsCentre() {
         if (alive) {
           setFixtures(realFixtures);
           console.log('Loaded', realFixtures.length, 'real GW', currentGw, 'fixtures');
+          
+          // Check if we're past the deadline
+          if (realFixtures.length > 0 && realFixtures[0].kickoff_time) {
+            // Find the earliest kickoff time
+            const earliestKickoff = realFixtures.reduce((earliest, fixture) => {
+              if (!fixture.kickoff_time) return earliest;
+              const fixtureTime = new Date(fixture.kickoff_time);
+              return !earliest || fixtureTime < earliest ? fixtureTime : earliest;
+            }, null as Date | null);
+            
+            if (earliestKickoff) {
+              // Simple approach: just check if current time is past 18:45
+              const now = new Date();
+              const currentHour = now.getHours();
+              const currentMinute = now.getMinutes();
+              const currentTimeInMinutes = currentHour * 60 + currentMinute;
+              
+              // Deadline is 18:45 = 18*60 + 45 = 1125 minutes
+              const deadlineInMinutes = 18 * 60 + 45; // 1125
+              
+              const isPastDeadline = currentTimeInMinutes > deadlineInMinutes;
+              
+              console.log('Current time:', currentHour + ':' + currentMinute.toString().padStart(2, '0'));
+              console.log('Current minutes:', currentTimeInMinutes);
+              console.log('Deadline minutes:', deadlineInMinutes);
+              console.log('Is past deadline?', isPastDeadline);
+              
+              setIsPastDeadline(isPastDeadline);
+            }
+          }
         }
 
         // Fetch user's picks for current gameweek
@@ -243,6 +279,7 @@ export default function NewPredictionsCentre() {
                               <>
                             <button
                               onClick={() => {
+                                if (isPastDeadline) return;
                                 const newPicks = new Map(picks);
                             newPicks.set(fixture.fixture_index, {
                               fixture_index: fixture.fixture_index,
@@ -251,10 +288,13 @@ export default function NewPredictionsCentre() {
                             });
                                 setPicks(newPicks);
                               }}
+                              disabled={isPastDeadline}
                               className={`h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center ${
                             userPick?.pick === "H"
                               ? "bg-[#1C8376] text-white border-[#1C8376]"
-                                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                                  : isPastDeadline 
+                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
                               Home Win
@@ -262,6 +302,7 @@ export default function NewPredictionsCentre() {
                             
                             <button
                               onClick={() => {
+                                if (isPastDeadline) return;
                                 const newPicks = new Map(picks);
                             newPicks.set(fixture.fixture_index, {
                               fixture_index: fixture.fixture_index,
@@ -270,10 +311,13 @@ export default function NewPredictionsCentre() {
                             });
                                 setPicks(newPicks);
                               }}
+                              disabled={isPastDeadline}
                               className={`h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center ${
                             userPick?.pick === "D"
                               ? "bg-[#1C8376] text-white border-[#1C8376]"
-                                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                                  : isPastDeadline 
+                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
                               Draw
@@ -281,6 +325,7 @@ export default function NewPredictionsCentre() {
                             
                             <button
                               onClick={() => {
+                                if (isPastDeadline) return;
                                 const newPicks = new Map(picks);
                             newPicks.set(fixture.fixture_index, {
                               fixture_index: fixture.fixture_index,
@@ -289,10 +334,13 @@ export default function NewPredictionsCentre() {
                             });
                                 setPicks(newPicks);
                               }}
+                              disabled={isPastDeadline}
                               className={`h-16 rounded-xl border text-sm font-medium transition-colors flex items-center justify-center ${
                             userPick?.pick === "A"
                               ? "bg-[#1C8376] text-white border-[#1C8376]"
-                                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                                  : isPastDeadline 
+                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
                               Away Win
@@ -311,30 +359,44 @@ export default function NewPredictionsCentre() {
         <div className="p-6 bg-white shadow-lg">
           <div className="max-w-2xl mx-auto space-y-3">
             {/* Deadline reminder */}
-            {fixtures.length > 0 && fixtures[0].kickoff_time && (
-              <div className="text-center">
-                <div className="text-xs text-slate-500 mb-1">Deadline</div>
-                <div className="text-sm font-bold text-slate-700">
-                {(() => {
-                  const firstKickoff = new Date(fixtures[0].kickoff_time);
-                  const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000));
-                  const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
-                  const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
-                  return `${hours}:${minutes}`;
-                })()}
+            {fixtures.length > 0 && (() => {
+              const earliestKickoff = fixtures.reduce((earliest, fixture) => {
+                if (!fixture.kickoff_time) return earliest;
+                const fixtureTime = new Date(fixture.kickoff_time);
+                return !earliest || fixtureTime < earliest ? fixtureTime : earliest;
+              }, null as Date | null);
+              
+              return earliestKickoff && (
+                <div className="text-center">
+                  <div className="text-xs text-slate-500 mb-1">Deadline</div>
+                  <div className="text-sm font-bold text-slate-700">
+                    {(() => {
+                      // TEMPORARY FIX: Treat stored UTC times as local times
+                      const deadlineTime = new Date(earliestKickoff.getTime() - (75 * 60 * 1000));
+                      const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
+                      const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
+                      return `${hours}:${minutes}`;
+                    })()}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    (75 minutes before first kickoff)
+                  </div>
                 </div>
-                <div className="text-xs text-slate-500 mt-1">
-                  (75 minutes before first kickoff)
-                </div>
-              </div>
-            )}
+              );
+            })()}
             
-            {/* Show buttons only if not submitted */}
-            {!submitted && (
+            {/* Show buttons only if not submitted and not past deadline */}
+            {!submitted && !isPastDeadline && (
               <>
             {/* Save Predictions Button */}
             <button
-                  onClick={() => setShowSaveModal(true)}
+                  onClick={() => {
+                    if (isPastDeadline) {
+                      alert('⚠️ Too late! Predictions are now closed. The deadline was 75 minutes before the first kickoff.');
+                      return;
+                    }
+                    setShowSaveModal(true);
+                  }}
               className="w-full py-4 bg-slate-600 text-white rounded-2xl font-bold hover:bg-slate-700 transition-colors"
             >
               Save Predictions
@@ -343,7 +405,11 @@ export default function NewPredictionsCentre() {
             {/* Confirm Predictions Button */}
             <button
               onClick={() => {
-                    const allPicksMade = fixtures.every(f => picks.has(f.fixture_index));
+                if (isPastDeadline) {
+                  alert('⚠️ Too late! Predictions are now closed. The deadline was 75 minutes before the first kickoff.');
+                  return;
+                }
+                const allPicksMade = fixtures.every(f => picks.has(f.fixture_index));
                 if (allPicksMade) {
                       setShowConfirmModal(true);
                 } else {
@@ -355,6 +421,16 @@ export default function NewPredictionsCentre() {
                   Confirm Predictions
             </button>
               </>
+            )}
+            
+            {/* Show deadline passed message */}
+            {isPastDeadline && !submitted && (
+              <div className="text-center py-6">
+                <div className="text-lg font-bold text-red-600 mb-2">⚠️ Deadline Passed</div>
+                <div className="text-sm text-slate-600">
+                  Predictions are now closed. The deadline was 75 minutes before the first kickoff.
+                </div>
+              </div>
             )}
             
             {/* Show submitted message if predictions are confirmed */}
@@ -377,23 +453,31 @@ export default function NewPredictionsCentre() {
               <div className="text-2xl font-bold text-slate-900 mb-2">Save Predictions?</div>
               <div className="text-slate-600 mb-6">
                 Your predictions will be saved but you can still change them before confirming.
-                {fixtures.length > 0 && fixtures[0].kickoff_time && (
-                  <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                    <div className="text-sm font-medium text-amber-800 mb-1">Deadline Reminder</div>
-                    <div className="text-xs text-amber-700">
-                      {(() => {
-                        const firstKickoff = new Date(fixtures[0].kickoff_time);
-                        const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000));
-                        const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
-                        const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
-                        return `${hours}:${minutes}`;
-                      })()}
+                {fixtures.length > 0 && (() => {
+                  const earliestKickoff = fixtures.reduce((earliest, fixture) => {
+                    if (!fixture.kickoff_time) return earliest;
+                    const fixtureTime = new Date(fixture.kickoff_time);
+                    return !earliest || fixtureTime < earliest ? fixtureTime : earliest;
+                  }, null as Date | null);
+                  
+                  return earliestKickoff && (
+                    <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="text-sm font-medium text-amber-800 mb-1">Deadline Reminder</div>
+                      <div className="text-xs text-amber-700">
+                        {(() => {
+                          // TEMPORARY FIX: Treat stored UTC times as local times
+                          const deadlineTime = new Date(earliestKickoff.getTime() - (75 * 60 * 1000));
+                          const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
+                          const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
+                          return `${hours}:${minutes}`;
+                        })()}
+                      </div>
+                      <div className="text-xs text-amber-600 mt-1">
+                        (75 minutes before first kickoff)
+                      </div>
                     </div>
-                    <div className="text-xs text-amber-600 mt-1">
-                      (75 minutes before first kickoff)
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
                 </div>
               <div className="flex gap-3">
             <button
