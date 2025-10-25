@@ -342,26 +342,34 @@ export default function LeaguePage() {
     (async () => {
       const deadlines = new Map<number, Date>();
       
-      // Get deadlines for completed GWs (GWs that have results)
-      for (const gw of availableGws) {
-        const { data: firstFixture } = await supabase
-          .from("fixtures")
-          .select("kickoff_time")
-          .eq("gw", gw)
-          .order("kickoff_time", { ascending: true })
-          .limit(1)
-          .maybeSingle();
+      // Get all GWs that have fixtures (not just those with results)
+      const { data: allGwData } = await supabase
+        .from("fixtures")
+        .select("gw, kickoff_time")
+        .order("gw", { ascending: true });
+      
+      if (allGwData) {
+        // Group by GW to find first kickoff for each GW
+        const gwFirstKickoffs = new Map<number, string>();
+        allGwData.forEach((f: any) => {
+          if (!gwFirstKickoffs.has(f.gw) || (f.kickoff_time && new Date(f.kickoff_time) < new Date(gwFirstKickoffs.get(f.gw)!))) {
+            if (f.kickoff_time) {
+              gwFirstKickoffs.set(f.gw, f.kickoff_time);
+            }
+          }
+        });
         
-        if (firstFixture?.kickoff_time) {
-          const firstKickoff = new Date(firstFixture.kickoff_time);
+        // Calculate deadline for each GW (75 minutes before first kickoff)
+        gwFirstKickoffs.forEach((kickoffTime, gw) => {
+          const firstKickoff = new Date(kickoffTime);
           const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000)); // 75 minutes before
           deadlines.set(gw, deadlineTime);
-        }
+        });
       }
       
       setGwDeadlines(deadlines);
     })();
-  }, [availableGws]);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -1163,6 +1171,19 @@ export default function LeaguePage() {
     const allSubmitted = members.length > 0 && members.every((m) => submittedMap.get(`${m.id}:${picksGw}`));
     const resultsPublished = latestResultsGw !== null && latestResultsGw >= picksGw;
     const remaining = members.filter((m) => !submittedMap.get(`${m.id}:${picksGw}`)).length;
+    const whoDidntSubmit = members.filter((m) => !submittedMap.get(`${m.id}:${picksGw}`)).map(m => m.name);
+    
+    // Check if deadline has passed for this GW
+    const gwDeadline = gwDeadlines.get(picksGw);
+    const deadlinePassed = gwDeadline ? new Date() >= gwDeadline : false;
+    
+    console.log(`GW${picksGw} deadline check:`, {
+      gwDeadline,
+      now: new Date(),
+      deadlinePassed,
+      allSubmitted,
+      willShowPredictions: allSubmitted || deadlinePassed
+    });
 
     return (
       <div className="mt-4">
@@ -1176,12 +1197,16 @@ export default function LeaguePage() {
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-bold border border-blue-300 shadow-sm">
               All Submitted
             </span>
+          ) : deadlinePassed ? (
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-sm font-bold border border-orange-300 shadow-sm">
+              Deadline Passed {whoDidntSubmit.length > 0 && `(${whoDidntSubmit.join(', ')} didn't submit)`}
+            </span>
           ) : (
             <span className="text-slate-500">not all submitted</span>
           )}
         </div>
 
-        {!allSubmitted ? (
+        {!allSubmitted && !deadlinePassed ? (
           <div className="mt-3 rounded-2xl border bg-white shadow-sm p-4 text-slate-700">
             <div className="mb-3 flex items-center justify-between">
               <div>
