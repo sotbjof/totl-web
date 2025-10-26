@@ -37,23 +37,83 @@ type PickRow = {
   pick: "H" | "D" | "A";
 };
 
+type ResultRow = {
+  gw: number;
+  fixture_index: number;
+  result: "H" | "D" | "A" | null;
+};
+
 export default function NewPredictionsCentre() {
   const { user } = useAuth();
   
   const [currentGw, setCurrentGw] = useState<number | null>(null);
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [picks, setPicks] = useState<Map<number, Pick>>(new Map());
+  const [results, setResults] = useState<Map<number, "H" | "D" | "A">>(new Map());
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPastDeadline, setIsPastDeadline] = useState(false);
+  const [score, setScore] = useState<number | null>(null);
+  const [topPercent, setTopPercent] = useState<number | null>(null);
 
   // Debug: Log when isPastDeadline changes
   useEffect(() => {
     console.log('isPastDeadline state changed to:', isPastDeadline);
   }, [isPastDeadline]);
+
+  // Calculate score when results or picks change
+  useEffect(() => {
+    if (results.size > 0 && picks.size > 0) {
+      let correct = 0;
+      picks.forEach((pick) => {
+        const result = results.get(pick.fixture_index);
+        if (result && result === pick.pick) {
+          correct++;
+        }
+      });
+      setScore(correct);
+      console.log('Calculated score:', correct);
+      
+      // Calculate top percentage
+      (async () => {
+        if (currentGw) {
+          // Get all users' picks for this GW
+          const { data: allPicks } = await supabase
+            .from("picks")
+            .select("user_id, fixture_index, pick")
+            .eq("gw", currentGw);
+          
+          if (allPicks) {
+            // Group picks by user and calculate each user's score
+            const userScores = new Map<string, number>();
+            allPicks.forEach((p) => {
+              const result = results.get(p.fixture_index);
+              const userScore = userScores.get(p.user_id) || 0;
+              if (result && result === p.pick) {
+                userScores.set(p.user_id, userScore + 1);
+              } else {
+                userScores.set(p.user_id, userScore);
+              }
+            });
+            
+            // Convert to array and sort descending
+            const scores = Array.from(userScores.values()).sort((a, b) => b - a);
+            
+            // Calculate what percentage of users scored the same or less
+            const betterOrEqual = scores.filter(s => s >= correct).length;
+            const totalUsers = scores.length;
+            const percent = Math.round((betterOrEqual / totalUsers) * 100);
+            
+            setTopPercent(percent);
+            console.log('Top percent:', percent);
+          }
+        }
+      })();
+    }
+  }, [results, picks, currentGw]);
 
   // Load current gameweek data from database
   useEffect(() => {
@@ -150,6 +210,26 @@ export default function NewPredictionsCentre() {
             setSubmitted(hasAllPicks);
           }
         }
+
+        // Fetch results for current gameweek
+        const { data: rs, error: rsErr } = await supabase
+          .from("gw_results")
+          .select("gw,fixture_index,result")
+          .eq("gw", currentGw);
+
+        if (!rsErr && rs) {
+          const resultsMap = new Map<number, "H" | "D" | "A">();
+          (rs as ResultRow[]).forEach((r) => {
+            if (r.result === "H" || r.result === "D" || r.result === "A") {
+              resultsMap.set(r.fixture_index, r.result);
+            }
+          });
+          
+          if (alive) {
+            setResults(resultsMap);
+            console.log('Loaded', resultsMap.size, 'results for GW', currentGw);
+          }
+        }
       } catch (error) {
         console.error('Error loading GW data:', error);
       } finally {
@@ -186,21 +266,48 @@ export default function NewPredictionsCentre() {
             </div>
           </div>
 
-          {/* Current Gameweek banner - show active gameweek */}
+          {/* Current Gameweek banner - show different content based on submitted state */}
           {currentGw && (
             <div className="mt-2 mb-3">
-              <div className="rounded-xl border bg-gradient-to-r from-[#1C8376]/10 to-blue-50 border-[#1C8376]/20 px-6 py-4">
-                <div className="text-center">
-                  <div className="font-semibold text-[#1C8376] text-lg">Gameweek {currentGw}</div>
-                  <div className="text-sm text-slate-600">Make your predictions below</div>
+              {!submitted ? (
+                <div className="rounded-xl border bg-gradient-to-r from-[#1C8376]/10 to-blue-50 border-[#1C8376]/20 px-6 py-4">
+                  <div className="text-center">
+                    <div className="font-semibold text-[#1C8376] text-lg">Gameweek {currentGw}</div>
+                    <div className="text-sm text-slate-600">Make your predictions below</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border bg-gradient-to-br from-[#1C8376]/5 to-blue-50/50 shadow-sm px-6 py-5">
+                  <div className="text-center">
+                    <div className="font-bold text-slate-900 text-xl mb-3">Game Week {currentGw}</div>
+                    {score !== null && (
+                      <>
+                        <div className="flex items-center justify-center gap-3 mb-3">
+                          <div className="text-4xl font-extrabold text-[#1C8376]">{score}/{fixtures.length}</div>
+                          {topPercent !== null && (
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 border border-yellow-300">
+                              <span className="text-sm font-bold text-orange-700">Top {topPercent}%</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mb-3 bg-slate-200 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-[#1C8376] to-blue-500 transition-all duration-500" 
+                            style={{ width: `${(score / fixtures.length) * 100}%` }}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
           )}
 
           <div className="space-y-4">
             {fixtures.map((fixture) => {
               const userPick = picks.get(fixture.fixture_index);
+              const result = results.get(fixture.fixture_index);
               
               // Format kickoff time - using same logic as original Predictions page
               const kickoff = fixture.kickoff_time
@@ -253,27 +360,63 @@ export default function NewPredictionsCentre() {
                           <div className="grid grid-cols-3 gap-3">
                             {submitted ? (
                               <>
-                                <div className={`h-16 rounded-xl border text-sm font-medium flex items-center justify-center ${
-                                  userPick?.pick === "H"
-                                    ? "bg-[#1C8376] text-white border-[#1C8376]"
-                                    : "bg-slate-50 text-slate-400 border-slate-200"
-                                }`}>
-                                  Home Win
-                                </div>
-                                <div className={`h-16 rounded-xl border text-sm font-medium flex items-center justify-center ${
-                                  userPick?.pick === "D"
-                                    ? "bg-[#1C8376] text-white border-[#1C8376]"
-                                    : "bg-slate-50 text-slate-400 border-slate-200"
-                                }`}>
-                                  Draw
-                                </div>
-                                <div className={`h-16 rounded-xl border text-sm font-medium flex items-center justify-center ${
-                                  userPick?.pick === "A"
-                                    ? "bg-[#1C8376] text-white border-[#1C8376]"
-                                    : "bg-slate-50 text-slate-400 border-slate-200"
-                                }`}>
-                                  Away Win
-                                </div>
+                                {(() => {
+                                  const isCorrect = result && userPick?.pick === result;
+                                  const isIncorrect = result && userPick?.pick !== result;
+                                  return (
+                                    <div className={`h-16 rounded-xl border text-sm font-medium flex items-center justify-center relative overflow-hidden ${
+                                      userPick?.pick === "H"
+                                        ? isCorrect
+                                          ? "bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 text-white border-yellow-300 shadow-xl shadow-gray-400/40 before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s] ring-2 ring-yellow-300/60"
+                                          : isIncorrect && result === "H"
+                                          ? "bg-red-500 text-white border-red-400"
+                                          : "bg-[#1C8376] text-white border-[#1C8376]"
+                                        : result === "H"
+                                        ? "bg-gray-300 text-slate-700 border-gray-400"
+                                        : "bg-slate-50 text-slate-400 border-slate-200"
+                                    }`}>
+                                      Home Win
+                                    </div>
+                                  );
+                                })()}
+                                {(() => {
+                                  const isCorrect = result && userPick?.pick === result;
+                                  const isIncorrect = result && userPick?.pick !== result;
+                                  return (
+                                    <div className={`h-16 rounded-xl border text-sm font-medium flex items-center justify-center relative overflow-hidden ${
+                                      userPick?.pick === "D"
+                                        ? isCorrect
+                                          ? "bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 text-white border-yellow-300 shadow-xl shadow-gray-400/40 before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s] ring-2 ring-yellow-300/60"
+                                          : isIncorrect && result === "D"
+                                          ? "bg-red-500 text-white border-red-400"
+                                          : "bg-[#1C8376] text-white border-[#1C8376]"
+                                        : result === "D"
+                                        ? "bg-gray-300 text-slate-700 border-gray-400"
+                                        : "bg-slate-50 text-slate-400 border-slate-200"
+                                    }`}>
+                                      Draw
+                                    </div>
+                                  );
+                                })()}
+                                {(() => {
+                                  const isCorrect = result && userPick?.pick === result;
+                                  const isIncorrect = result && userPick?.pick !== result;
+                                  return (
+                                    <div className={`h-16 rounded-xl border text-sm font-medium flex items-center justify-center relative overflow-hidden ${
+                                      userPick?.pick === "A"
+                                        ? isCorrect
+                                          ? "bg-gradient-to-br from-yellow-400 via-orange-500 via-pink-500 to-purple-600 text-white border-yellow-300 shadow-xl shadow-gray-400/40 before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:animate-[shimmer_1.2s_ease-in-out_infinite] after:absolute after:inset-0 after:bg-gradient-to-r after:from-transparent after:via-yellow-200/50 after:to-transparent after:animate-[shimmer_1.8s_ease-in-out_infinite_0.4s] ring-2 ring-yellow-300/60"
+                                          : isIncorrect && result === "A"
+                                          ? "bg-red-500 text-white border-red-400"
+                                          : "bg-[#1C8376] text-white border-[#1C8376]"
+                                        : result === "A"
+                                        ? "bg-gray-300 text-slate-700 border-gray-400"
+                                        : "bg-slate-50 text-slate-400 border-slate-200"
+                                    }`}>
+                                      Away Win
+                                    </div>
+                                  );
+                                })()}
                               </>
                             ) : (
                               <>
