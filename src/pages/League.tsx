@@ -18,24 +18,24 @@ async function getLeagueStartGw(league: any, currentGw: number): Promise<number>
   } else if (gw8StartLeagues.includes(league?.name || '')) {
     return 8; // Only show from GW8 onwards
   } else {
-    // For new leagues: check if created before the most recent completed GW deadline
+    // For new leagues: find the earliest GW that the league was created before
     if (league?.created_at && currentGw) {
-      // Find the most recent GW that has results (completed GW)
+      const leagueCreatedAt = new Date(league.created_at);
+      
+      // Get all GWs with results
       const { data: resultsData } = await supabase
         .from("gw_results")
         .select("gw")
-        .order("gw", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("gw", { ascending: true });
       
-      const latestCompletedGw = resultsData?.gw;
+      const completedGws = resultsData ? [...new Set(resultsData.map(r => r.gw))] : [];
       
-      if (latestCompletedGw) {
-        // Get the deadline for the most recent completed GW
+      // Find the earliest GW where league was created before its deadline
+      for (const gw of completedGws) {
         const { data: firstFixture } = await supabase
           .from("fixtures")
           .select("kickoff_time")
-          .eq("gw", latestCompletedGw)
+          .eq("gw", gw)
           .order("kickoff_time", { ascending: true })
           .limit(1)
           .maybeSingle();
@@ -43,20 +43,19 @@ async function getLeagueStartGw(league: any, currentGw: number): Promise<number>
         if (firstFixture?.kickoff_time) {
           const firstKickoff = new Date(firstFixture.kickoff_time);
           const deadlineTime = new Date(firstKickoff.getTime() - (75 * 60 * 1000)); // 75 minutes before
-          const leagueCreatedAt = new Date(league.created_at);
-          
           
           if (leagueCreatedAt <= deadlineTime) {
-            return latestCompletedGw; // Created before deadline - include completed GW
-          } else {
-            return latestCompletedGw + 1; // Created after deadline - start from next GW
+            return gw; // League was created before this GW's deadline
           }
-        } else {
-          return currentGw; // No fixtures for completed GW - start from current
         }
-      } else {
-        return currentGw; // No completed GWs - start from current
       }
+      
+      // If league was created after all completed GWs, start from next GW
+      if (completedGws.length > 0) {
+        return Math.max(...completedGws) + 1;
+      }
+      
+      return currentGw; // No completed GWs - start from current
     } else {
       return currentGw; // Fallback - start from current GW
     }
