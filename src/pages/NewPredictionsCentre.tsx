@@ -199,10 +199,21 @@ export default function NewPredictionsCentre() {
           if (alive) {
             setPicks(picksMap);
             console.log('Loaded', picksMap.size, 'user picks for GW', currentGw);
-            
-            // Check if user has submitted predictions (has picks for all fixtures)
-            const hasAllPicks = realFixtures.every(f => picksMap.has(f.fixture_index));
-            setSubmitted(hasAllPicks);
+          }
+        }
+        
+        // Check if user has submitted (confirmed) their predictions
+        if (user?.id) {
+          const { data: submission } = await supabase
+            .from("gw_submissions")
+            .select("submitted_at")
+            .eq("gw", currentGw)
+            .eq("user_id", user.id)
+            .maybeSingle();
+          
+          if (alive) {
+            setSubmitted(Boolean(submission?.submitted_at));
+            console.log('Submission status:', submission?.submitted_at ? 'confirmed' : 'not confirmed');
           }
         }
 
@@ -698,16 +709,33 @@ export default function NewPredictionsCentre() {
                       }));
 
                       // Insert/update picks in database
-                      const { error } = await supabase
+                      const { error: picksError } = await supabase
                         .from('picks')
                         .upsert(picksArray, { 
                           onConflict: 'user_id,gw,fixture_index',
                           ignoreDuplicates: false 
                         });
 
-                      if (error) {
-                        console.error('Error confirming picks:', error);
+                      if (picksError) {
+                        console.error('Error confirming picks:', picksError);
                         alert('Failed to confirm predictions. Please try again.');
+                        return;
+                      }
+
+                      // Record submission in gw_submissions table
+                      const { error: submissionError } = await supabase
+                        .from('gw_submissions')
+                        .upsert({
+                          user_id: user?.id,
+                          gw: currentGw,
+                          submitted_at: new Date().toISOString()
+                        }, {
+                          onConflict: 'user_id,gw'
+                        });
+
+                      if (submissionError) {
+                        console.error('Error recording submission:', submissionError);
+                        alert('Failed to record submission. Please try again.');
                         return;
                       }
 
