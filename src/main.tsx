@@ -42,8 +42,8 @@ function AppContent({ menuOpen, setMenuOpen }: {
   const location = useLocation();
   const { user, showWelcome, dismissWelcome, signOut } = useAuth();
   
-  // Admin user ID (Jof)
-  const isAdmin = user?.id === '4542c037-5b38-40d0-b189-847b8f17c222';
+  // Admin user IDs (Jof and ThomasJamesBird)
+  const isAdmin = user?.id === '4542c037-5b38-40d0-b189-847b8f17c222' || user?.id === '36f31625-6d6c-4aa4-815a-1493a812841b';
   
   // Hide header/banner for full-screen pages
   const isFullScreenPage = false;
