@@ -158,20 +158,15 @@ export default function NewPredictionsCentre() {
             }, null as Date | null);
             
             if (earliestKickoff) {
-              // Simple approach: just check if current time is past 18:45
+              // Calculate the deadline as 75 minutes before the earliest kickoff
+              const deadlineTime = new Date(earliestKickoff.getTime() - (75 * 60 * 1000));
               const now = new Date();
-              const currentHour = now.getHours();
-              const currentMinute = now.getMinutes();
-              const currentTimeInMinutes = currentHour * 60 + currentMinute;
               
-              // Deadline is 18:45 = 18*60 + 45 = 1125 minutes
-              const deadlineInMinutes = 18 * 60 + 45; // 1125
+              const isPastDeadline = now.getTime() > deadlineTime.getTime();
               
-              const isPastDeadline = currentTimeInMinutes > deadlineInMinutes;
-              
-              console.log('Current time:', currentHour + ':' + currentMinute.toString().padStart(2, '0'));
-              console.log('Current minutes:', currentTimeInMinutes);
-              console.log('Deadline minutes:', deadlineInMinutes);
+              console.log('Earliest kickoff:', earliestKickoff.toISOString());
+              console.log('Deadline time:', deadlineTime.toISOString());
+              console.log('Current time:', now.toISOString());
               console.log('Is past deadline?', isPastDeadline);
               
               setIsPastDeadline(isPastDeadline);
