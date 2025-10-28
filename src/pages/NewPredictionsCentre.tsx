@@ -522,9 +522,12 @@ export default function NewPredictionsCentre() {
                     {(() => {
                       // TEMPORARY FIX: Treat stored UTC times as local times
                       const deadlineTime = new Date(earliestKickoff.getTime() - (75 * 60 * 1000));
+                      const weekday = deadlineTime.toLocaleDateString(undefined, { weekday: 'short' });
+                      const month = deadlineTime.toLocaleDateString(undefined, { month: 'short' });
+                      const day = deadlineTime.toLocaleDateString(undefined, { day: 'numeric' });
                       const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
                       const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
-                      return `${hours}:${minutes}`;
+                      return `${weekday}, ${month} ${day}, ${hours}:${minutes}`;
                     })()}
                   </div>
                   <div className="text-xs text-slate-500 mt-1">
@@ -616,9 +619,12 @@ export default function NewPredictionsCentre() {
                         {(() => {
                           // TEMPORARY FIX: Treat stored UTC times as local times
                           const deadlineTime = new Date(earliestKickoff.getTime() - (75 * 60 * 1000));
+                          const weekday = deadlineTime.toLocaleDateString(undefined, { weekday: 'short' });
+                          const month = deadlineTime.toLocaleDateString(undefined, { month: 'short' });
+                          const day = deadlineTime.toLocaleDateString(undefined, { day: 'numeric' });
                           const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
                           const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
-                          return `${hours}:${minutes}`;
+                          return `${weekday}, ${month} ${day}, ${hours}:${minutes}`;
                         })()}
                       </div>
                       <div className="text-xs text-amber-600 mt-1">
