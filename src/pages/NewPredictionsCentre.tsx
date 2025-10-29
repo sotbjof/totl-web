@@ -55,6 +55,7 @@ export default function NewPredictionsCentre() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalType, setSuccessModalType] = useState<'saved' | 'confirmed'>('saved');
   const [isPastDeadline, setIsPastDeadline] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [topPercent, setTopPercent] = useState<number | null>(null);
@@ -668,10 +669,8 @@ export default function NewPredictionsCentre() {
 
                       console.log('Successfully saved picks:', picksArray);
                       setShowSaveModal(false);
+                      setSuccessModalType('saved');
                       setShowSuccessModal(true);
-                      
-                      // Trigger banner refresh
-                      window.dispatchEvent(new CustomEvent('predictionsSubmitted'));
                     } catch (error) {
                       console.error('Error saving picks:', error);
                       alert('Failed to save predictions. Please try again.');
@@ -748,6 +747,7 @@ export default function NewPredictionsCentre() {
                       console.log('Successfully confirmed picks:', picksArray);
                       setSubmitted(true);
                       setShowConfirmModal(false);
+                      setSuccessModalType('confirmed');
                       setShowSuccessModal(true);
                       
                       // Trigger banner refresh
@@ -772,10 +772,24 @@ export default function NewPredictionsCentre() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 mb-2">Predictions Saved!</div>
-              <div className="text-slate-600 mb-6">
-                Your predictions have been saved successfully. Good luck!
-          </div>
+              {successModalType === 'saved' ? (
+                <>
+                  <div className="text-2xl font-bold text-green-600 mb-2">Predictions Saved!</div>
+                  <div className="text-slate-600 mb-4">
+                    Your predictions have been saved as a draft. You can still edit them until you confirm.
+                  </div>
+                  <div className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3 mb-6 border border-amber-200">
+                    ⚠️ <strong>Important:</strong> Don't forget to come back and publish your predictions before the deadline to make them final!
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-green-600 mb-2">Predictions Confirmed!</div>
+                  <div className="text-slate-600 mb-6">
+                    Your predictions have been published and locked. Good luck!
+                  </div>
+                </>
+              )}
               <button
                 onClick={() => setShowSuccessModal(false)}
                 className="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
