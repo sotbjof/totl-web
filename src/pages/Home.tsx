@@ -145,19 +145,17 @@ export default function HomePage() {
         userPicks = (pk as PickRow[]) ?? [];
       }
 
+      // Check if user has submitted (confirmed) their predictions
       let submitted = false;
-      {
-        // Check if user has picks for all fixtures in current GW
-        if (thisGwFixtures.length > 0) {
-          const { data: userPicksForGw } = await supabase
-            .from("picks")
-            .select("fixture_index")
-            .eq("user_id", user?.id)
-            .eq("gw", currentGw);
-          
-          // User has submitted if they have picks for all fixtures
-          submitted = !!(userPicksForGw && userPicksForGw.length === thisGwFixtures.length);
-        }
+      if (user?.id && thisGwFixtures.length > 0) {
+        const { data: submission } = await supabase
+          .from("gw_submissions")
+          .select("submitted_at")
+          .eq("user_id", user.id)
+          .eq("gw", currentGw)
+          .maybeSingle();
+        
+        submitted = !!submission?.submitted_at;
       }
 
       let score: number | null = null;
@@ -200,8 +198,11 @@ export default function HomePage() {
       setGwSubmitted(submitted);
       setGwScore(score);
 
+      // Only populate picksMap if user has submitted (confirmed) their predictions
       const map: Record<number, "H" | "D" | "A"> = {};
-      userPicks.forEach((p) => (map[p.fixture_index] = p.pick));
+      if (submitted) {
+        userPicks.forEach((p) => (map[p.fixture_index] = p.pick));
+      }
 
       setLeagues(ls);
       leagueIdsRef.current = new Set(ls.map((l) => l.id));
@@ -765,7 +766,7 @@ export default function HomePage() {
           </h2>
           {fixtures.length > 0 && !gwSubmitted && gwScore === null && (
             <div>
-              <Link to="/new-predictions" className="inline-block px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 transition-colors no-underline">Do your predictions</Link>
+              <Link to="/new-predictions" className="inline-block px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 transition-colors underline">Make your predictions</Link>
             </div>
           )}
         </div>
@@ -884,14 +885,6 @@ export default function HomePage() {
           </div>
         )}
       </section>
-
-      {/* Old School Mode Toggle Button */}
-      <button
-        onClick={() => setOldSchoolMode(!oldSchoolMode)}
-        className="oldschool-toggle"
-      >
-        {oldSchoolMode ? 'MODERN MODE' : 'OLD SCHOOL MODE'}
-      </button>
 
     </div>
   );
