@@ -27,7 +27,7 @@ type PickRow = { user_id: string; gw: number; fixture_index: number; pick: "H" |
 
 export default function HomePage() {
   const { user } = useAuth();
-  const [oldSchoolMode, setOldSchoolMode] = useState(() => {
+  const [oldSchoolMode] = useState(() => {
     const saved = localStorage.getItem('oldSchoolMode');
     return saved ? JSON.parse(saved) : false;
   });
