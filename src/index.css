@@ -618,9 +618,9 @@ select option {
 /* Old School Toggle Button - always visible and not affected by theme */
 .oldschool-toggle {
   position: fixed !important;
-  bottom: 16px !important;
+  bottom: 80px !important;
   right: 16px !important;
-  z-index: 9999 !important;
+  z-index: 10000 !important;
   font-family: 'Press Start 2P', monospace !important;
   font-size: 8px !important;
   background: #ffff00 !important;
@@ -630,6 +630,7 @@ select option {
   border-radius: 0 !important;
   box-shadow: 3px 3px 0px #000000 !important;
   text-transform: uppercase !important;
+  cursor: pointer !important;
 }
 
 /* Hide scrollbar for horizontal carousel */

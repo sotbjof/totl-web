@@ -55,6 +55,7 @@ export default function NewPredictionsCentre() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalType, setSuccessModalType] = useState<'saved' | 'confirmed'>('saved');
   const [isPastDeadline, setIsPastDeadline] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [topPercent, setTopPercent] = useState<number | null>(null);
@@ -158,20 +159,15 @@ export default function NewPredictionsCentre() {
             }, null as Date | null);
             
             if (earliestKickoff) {
-              // Simple approach: just check if current time is past 18:45
+              // Calculate the deadline as 75 minutes before the earliest kickoff
+              const deadlineTime = new Date(earliestKickoff.getTime() - (75 * 60 * 1000));
               const now = new Date();
-              const currentHour = now.getHours();
-              const currentMinute = now.getMinutes();
-              const currentTimeInMinutes = currentHour * 60 + currentMinute;
               
-              // Deadline is 18:45 = 18*60 + 45 = 1125 minutes
-              const deadlineInMinutes = 18 * 60 + 45; // 1125
+              const isPastDeadline = now.getTime() > deadlineTime.getTime();
               
-              const isPastDeadline = currentTimeInMinutes > deadlineInMinutes;
-              
-              console.log('Current time:', currentHour + ':' + currentMinute.toString().padStart(2, '0'));
-              console.log('Current minutes:', currentTimeInMinutes);
-              console.log('Deadline minutes:', deadlineInMinutes);
+              console.log('Earliest kickoff:', earliestKickoff.toISOString());
+              console.log('Deadline time:', deadlineTime.toISOString());
+              console.log('Current time:', now.toISOString());
               console.log('Is past deadline?', isPastDeadline);
               
               setIsPastDeadline(isPastDeadline);
@@ -204,10 +200,21 @@ export default function NewPredictionsCentre() {
           if (alive) {
             setPicks(picksMap);
             console.log('Loaded', picksMap.size, 'user picks for GW', currentGw);
-            
-            // Check if user has submitted predictions (has picks for all fixtures)
-            const hasAllPicks = realFixtures.every(f => picksMap.has(f.fixture_index));
-            setSubmitted(hasAllPicks);
+          }
+        }
+        
+        // Check if user has submitted (confirmed) their predictions
+        if (user?.id) {
+          const { data: submission } = await supabase
+            .from("gw_submissions")
+            .select("submitted_at")
+            .eq("gw", currentGw)
+            .eq("user_id", user.id)
+            .maybeSingle();
+          
+          if (alive) {
+            setSubmitted(Boolean(submission?.submitted_at));
+            console.log('Submission status:', submission?.submitted_at ? 'confirmed' : 'not confirmed');
           }
         }
 
@@ -516,9 +523,12 @@ export default function NewPredictionsCentre() {
                     {(() => {
                       // TEMPORARY FIX: Treat stored UTC times as local times
                       const deadlineTime = new Date(earliestKickoff.getTime() - (75 * 60 * 1000));
+                      const weekday = deadlineTime.toLocaleDateString(undefined, { weekday: 'short' });
+                      const month = deadlineTime.toLocaleDateString(undefined, { month: 'short' });
+                      const day = deadlineTime.toLocaleDateString(undefined, { day: 'numeric' });
                       const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
                       const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
-                      return `${hours}:${minutes}`;
+                      return `${weekday}, ${month} ${day}, ${hours}:${minutes}`;
                     })()}
                   </div>
                   <div className="text-xs text-slate-500 mt-1">
@@ -610,9 +620,12 @@ export default function NewPredictionsCentre() {
                         {(() => {
                           // TEMPORARY FIX: Treat stored UTC times as local times
                           const deadlineTime = new Date(earliestKickoff.getTime() - (75 * 60 * 1000));
+                          const weekday = deadlineTime.toLocaleDateString(undefined, { weekday: 'short' });
+                          const month = deadlineTime.toLocaleDateString(undefined, { month: 'short' });
+                          const day = deadlineTime.toLocaleDateString(undefined, { day: 'numeric' });
                           const hours = deadlineTime.getUTCHours().toString().padStart(2, '0');
                           const minutes = deadlineTime.getUTCMinutes().toString().padStart(2, '0');
-                          return `${hours}:${minutes}`;
+                          return `${weekday}, ${month} ${day}, ${hours}:${minutes}`;
                         })()}
                       </div>
                       <div className="text-xs text-amber-600 mt-1">
@@ -656,10 +669,8 @@ export default function NewPredictionsCentre() {
 
                       console.log('Successfully saved picks:', picksArray);
                       setShowSaveModal(false);
+                      setSuccessModalType('saved');
                       setShowSuccessModal(true);
-                      
-                      // Trigger banner refresh
-                      window.dispatchEvent(new CustomEvent('predictionsSubmitted'));
                     } catch (error) {
                       console.error('Error saving picks:', error);
                       alert('Failed to save predictions. Please try again.');
@@ -703,22 +714,40 @@ export default function NewPredictionsCentre() {
                       }));
 
                       // Insert/update picks in database
-                      const { error } = await supabase
+                      const { error: picksError } = await supabase
                         .from('picks')
                         .upsert(picksArray, { 
                           onConflict: 'user_id,gw,fixture_index',
                           ignoreDuplicates: false 
                         });
 
-                      if (error) {
-                        console.error('Error confirming picks:', error);
+                      if (picksError) {
+                        console.error('Error confirming picks:', picksError);
                         alert('Failed to confirm predictions. Please try again.');
+                        return;
+                      }
+
+                      // Record submission in gw_submissions table
+                      const { error: submissionError } = await supabase
+                        .from('gw_submissions')
+                        .upsert({
+                          user_id: user?.id,
+                          gw: currentGw,
+                          submitted_at: new Date().toISOString()
+                        }, {
+                          onConflict: 'user_id,gw'
+                        });
+
+                      if (submissionError) {
+                        console.error('Error recording submission:', submissionError);
+                        alert('Failed to record submission. Please try again.');
                         return;
                       }
 
                       console.log('Successfully confirmed picks:', picksArray);
                       setSubmitted(true);
                       setShowConfirmModal(false);
+                      setSuccessModalType('confirmed');
                       setShowSuccessModal(true);
                       
                       // Trigger banner refresh
@@ -743,10 +772,24 @@ export default function NewPredictionsCentre() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 mb-2">Predictions Saved!</div>
-              <div className="text-slate-600 mb-6">
-                Your predictions have been saved successfully. Good luck!
-          </div>
+              {successModalType === 'saved' ? (
+                <>
+                  <div className="text-2xl font-bold text-green-600 mb-2">Predictions Saved!</div>
+                  <div className="text-slate-600 mb-4">
+                    Your predictions have been saved as a draft. You can still edit them until you confirm.
+                  </div>
+                  <div className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3 mb-6 border border-amber-200">
+                    ⚠️ <strong>Important:</strong> Don't forget to come back and publish your predictions before the deadline to make them final!
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-green-600 mb-2">Predictions Confirmed!</div>
+                  <div className="text-slate-600 mb-6">
+                    Your predictions have been published and locked. Good luck!
+                  </div>
+                </>
+              )}
               <button
                 onClick={() => setShowSuccessModal(false)}
                 className="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"

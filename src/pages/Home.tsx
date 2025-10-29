@@ -27,7 +27,7 @@ type PickRow = { user_id: string; gw: number; fixture_index: number; pick: "H" |
 
 export default function HomePage() {
   const { user } = useAuth();
-  const [oldSchoolMode] = useState(() => {
+  const [oldSchoolMode, setOldSchoolMode] = useState(() => {
     const saved = localStorage.getItem('oldSchoolMode');
     return saved ? JSON.parse(saved) : false;
   });
@@ -366,13 +366,23 @@ export default function HomePage() {
 
         // 2c) compute from picks + gw_results (client-side)
         try {
-          const [{ data: rs }, { data: pk }] = await Promise.all([
+          const [{ data: rs }, { data: pk }, { data: submissions }] = await Promise.all([
             supabase.from("gw_results").select("gw,fixture_index,result"),
             supabase.from("picks").select("user_id,gw,fixture_index,pick"),
+            supabase.from("gw_submissions").select("user_id,gw,submitted_at"),
           ]);
 
           const results = (rs as Array<{gw:number, fixture_index:number, result:"H"|"D"|"A"|null}>) || [];
           const picksAll = (pk as Array<{user_id:string,gw:number,fixture_index:number,pick:"H"|"D"|"A"}>) || [];
+          const subs = (submissions as Array<{user_id:string,gw:number,submitted_at:string}>) || [];
+
+          // Build map of submitted users per GW
+          const submittedMap = new Map<string, boolean>();
+          subs.forEach(s => {
+            if (s.submitted_at) {
+              submittedMap.set(`${s.user_id}:${s.gw}`, true);
+            }
+          });
 
           // map gw:idx -> outcome
           const outMap = new Map<string, "H"|"D"|"A">();
@@ -381,19 +391,23 @@ export default function HomePage() {
           // Get latest GW with results
           const latestGw = Math.max(...results.map(r => r.gw));
           
-          // Calculate current scores (all GWs)
+          // Calculate current scores (all GWs) - only count picks from users who submitted
           const scores = new Map<string, number>();
           picksAll.forEach(p => {
+            // Only count picks from users who have submitted for this GW
+            if (!submittedMap.get(`${p.user_id}:${p.gw}`)) return;
             const out = outMap.get(`${p.gw}:${p.fixture_index}`);
             if (!out) return;
             if (p.pick === out) scores.set(p.user_id, (scores.get(p.user_id) || 0) + 1);
             else if (!scores.has(p.user_id)) scores.set(p.user_id, 0);
           });
 
-          // Calculate previous scores (up to latest GW - 1)
+          // Calculate previous scores (up to latest GW - 1) - only count picks from users who submitted
           const prevScores = new Map<string, number>();
           picksAll.forEach(p => {
             if (p.gw >= latestGw) return; // Skip latest GW
+            // Only count picks from users who have submitted for this GW
+            if (!submittedMap.get(`${p.user_id}:${p.gw}`)) return;
             const out = outMap.get(`${p.gw}:${p.fixture_index}`);
             if (!out) return;
             if (p.pick === out) prevScores.set(p.user_id, (prevScores.get(p.user_id) || 0) + 1);
@@ -871,6 +885,13 @@ export default function HomePage() {
         )}
       </section>
 
+      {/* Old School Mode Toggle Button */}
+      <button
+        onClick={() => setOldSchoolMode(!oldSchoolMode)}
+        className="oldschool-toggle"
+      >
+        {oldSchoolMode ? 'MODERN MODE' : 'OLD SCHOOL MODE'}
+      </button>
 
     </div>
   );
