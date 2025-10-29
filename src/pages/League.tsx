@@ -1437,9 +1437,7 @@ export default function LeaguePage() {
     const picksByFixture = new Map<number, PickRow[]>();
     picks.forEach((p) => {
       if (p.gw !== resGw) return;
-      // Only include picks from users who have submitted (confirmed) their predictions
-      const hasSubmitted = submittedMap.get(`${p.user_id}:${resGw}`);
-      if (!hasSubmitted) return;
+      // For results (past or completed GWs), include all picks regardless of submission status
       const arr = picksByFixture.get(p.fixture_index) ?? [];
       arr.push(p);
       picksByFixture.set(p.fixture_index, arr);
