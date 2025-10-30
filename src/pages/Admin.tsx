@@ -242,6 +242,19 @@ export default function AdminPage() {
       
       // Dispatch event to notify PredictionsBanner that fixtures have been published
       window.dispatchEvent(new CustomEvent('fixturesPublished'));
+
+      // Fire-and-forget: broadcast push to all users
+      try {
+        fetch('/.netlify/functions/sendPushAll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: `GW${gw} Published`,
+            message: `Game Week ${gw} fixtures are live. Make your predictions!`,
+            data: { type: 'fixtures_published', gw }
+          })
+        });
+      } catch (_) { /* ignore */ }
     } catch (e: any) {
       setError(e.message ?? "Failed to activate gameweek.");
     } finally {
@@ -300,6 +313,19 @@ export default function AdminPage() {
       
       // Dispatch event to refresh banners across the site
       window.dispatchEvent(new CustomEvent('resultsPublished', { detail: { gw } }));
+
+      // Fire-and-forget: broadcast push to all users
+      try {
+        fetch('/.netlify/functions/sendPushAll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: `GW${gw} Results`,
+            message: `Results for Game Week ${gw} are published. See how you scored!`,
+            data: { type: 'results_published', gw }
+          })
+        });
+      } catch (_) { /* ignore */ }
     } catch (e: any) {
       setError(e.message ?? "Failed to save results.");
     } finally {
