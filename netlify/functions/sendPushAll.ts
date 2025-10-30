@@ -33,30 +33,37 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const authHeader = ONESIGNAL_REST_API_KEY.startsWith('os_')
-      ? ONESIGNAL_REST_API_KEY
-      : `Basic ${ONESIGNAL_REST_API_KEY}`
+    const candidates = [
+      ONESIGNAL_REST_API_KEY.startsWith('os_') ? ONESIGNAL_REST_API_KEY : `Basic ${ONESIGNAL_REST_API_KEY}`,
+      `Bearer ${ONESIGNAL_REST_API_KEY}`,
+      `Basic ${ONESIGNAL_REST_API_KEY}`,
+      `Key ${ONESIGNAL_REST_API_KEY}`,
+    ]
 
-    const resp = await fetch('https://onesignal.com/api/v1/notifications', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader,
-      },
-      body: JSON.stringify({
-        app_id: ONESIGNAL_APP_ID,
-        included_segments: ['Subscribed Users'],
-        headings: { en: title },
-        contents: { en: message },
-        data: data ?? undefined,
-      }),
-    })
-
-    const jsonResp = await resp.json()
-    if (!resp.ok) {
-      return json(resp.status, { error: 'OneSignal error', details: jsonResp })
+    let lastResp: any = null
+    for (const authHeader of candidates) {
+      const resp = await fetch('https://onesignal.com/api/v1/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+        },
+        body: JSON.stringify({
+          app_id: ONESIGNAL_APP_ID,
+          included_segments: ['Subscribed Users'],
+          headings: { en: title },
+          contents: { en: message },
+          data: data ?? undefined,
+        }),
+      })
+      lastResp = { status: resp.status, body: await resp.json() }
+      if (resp.ok) {
+        return json(200, { ok: true, result: lastResp.body })
+      }
+      // Only retry on auth errors
+      if (![401, 403].includes(resp.status)) break
     }
-    return json(200, { ok: true, result: jsonResp })
+    return json(401, { error: 'OneSignal error', details: lastResp })
   } catch (e: any) {
     return json(500, { error: 'Failed to send notification', details: e?.message || String(e) })
   }
