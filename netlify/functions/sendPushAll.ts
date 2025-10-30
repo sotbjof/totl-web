@@ -33,11 +33,15 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    const authHeader = ONESIGNAL_REST_API_KEY.startsWith('os_')
+      ? ONESIGNAL_REST_API_KEY
+      : `Basic ${ONESIGNAL_REST_API_KEY}`
+
     const resp = await fetch('https://onesignal.com/api/v1/notifications', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+        'Authorization': authHeader,
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
