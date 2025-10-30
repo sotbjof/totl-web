@@ -33,35 +33,38 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const candidates = [
-      ONESIGNAL_REST_API_KEY.startsWith('os_') ? ONESIGNAL_REST_API_KEY : `Basic ${ONESIGNAL_REST_API_KEY}`,
-      `Bearer ${ONESIGNAL_REST_API_KEY}`,
-      `Basic ${ONESIGNAL_REST_API_KEY}`,
-      `Key ${ONESIGNAL_REST_API_KEY}`,
-    ]
+    const isV2 = ONESIGNAL_REST_API_KEY.startsWith('os_')
+    const endpoints = isV2
+      ? ['https://api.onesignal.com/notifications', 'https://onesignal.com/api/v1/notifications']
+      : ['https://onesignal.com/api/v1/notifications', 'https://api.onesignal.com/notifications']
+
+    const headersList = isV2
+      ? [`Bearer ${ONESIGNAL_REST_API_KEY}`, ONESIGNAL_REST_API_KEY, `Basic ${ONESIGNAL_REST_API_KEY}`]
+      : [`Basic ${ONESIGNAL_REST_API_KEY}`, `Bearer ${ONESIGNAL_REST_API_KEY}`]
 
     let lastResp: any = null
-    for (const authHeader of candidates) {
-      const resp = await fetch('https://onesignal.com/api/v1/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-        },
-        body: JSON.stringify({
-          app_id: ONESIGNAL_APP_ID,
-          included_segments: ['Subscribed Users'],
-          headings: { en: title },
-          contents: { en: message },
-          data: data ?? undefined,
-        }),
-      })
-      lastResp = { status: resp.status, body: await resp.json() }
-      if (resp.ok) {
-        return json(200, { ok: true, result: lastResp.body })
+    for (const endpoint of endpoints) {
+      for (const authHeader of headersList) {
+        const resp = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader,
+          },
+          body: JSON.stringify({
+            app_id: ONESIGNAL_APP_ID,
+            included_segments: ['Subscribed Users'],
+            headings: { en: title },
+            contents: { en: message },
+            data: data ?? undefined,
+          }),
+        })
+        lastResp = { endpoint, authHeader, status: resp.status, body: await resp.json() }
+        if (resp.ok) {
+          return json(200, { ok: true, result: lastResp.body })
+        }
+        if (![401, 403].includes(resp.status)) break
       }
-      // Only retry on auth errors
-      if (![401, 403].includes(resp.status)) break
     }
     return json(401, { error: 'OneSignal error', details: lastResp })
   } catch (e: any) {
