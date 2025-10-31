@@ -74,6 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Auto-register OneSignal Player ID (native) when signed in
   useEffect(() => {
     if (!user || !session) return;
+    const currentUser: User = user;
+    const currentSession: Session = session;
     let cancelled = false;
 
     async function attemptRegister() {
@@ -96,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!pid || cancelled) return;
 
-        const lsKey = `totl:last_pid:${user.id}`;
+        const lsKey = `totl:last_pid:${currentUser.id}`;
         const last = localStorage.getItem(lsKey);
         if (last === pid) return; // already registered this pid
 
@@ -104,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+            ...(currentSession.access_token ? { Authorization: `Bearer ${currentSession.access_token}` } : {}),
           },
           body: JSON.stringify({ playerId: pid, platform: 'ios' }),
         }).catch(() => {});
