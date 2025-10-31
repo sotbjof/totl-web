@@ -513,7 +513,8 @@ export default function LeaguePage() {
           filter: `league_id=eq.${league.id}`,
         },
         (payload) => {
-          setChat((prev) => [...prev, payload.new as ChatMsg]);
+          const msg = payload.new as ChatMsg;
+          setChat((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
         }
       )
       .subscribe();
