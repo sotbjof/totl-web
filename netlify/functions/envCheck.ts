@@ -17,6 +17,7 @@ export const handler: Handler = async () => {
     hasAppId: Boolean(appId),
     hasRestKey: Boolean(restKey),
     appIdLength: appId ? appId.length : 0,
+    appId,
     restKeyLength: restKey ? restKey.length : 0,
     branch: process.env.BRANCH || process.env.COMMIT_REF || 'unknown',
     context: process.env.CONTEXT || 'unknown'
