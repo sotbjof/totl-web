@@ -667,14 +667,21 @@ export default function LeaguePage() {
     const text = newMsg.trim();
     if (!text) return;
     setNewMsg("");
-    const { error } = await supabase.from("league_messages").insert({
-      league_id: league.id,
-      user_id: user.id,
-      content: text,
-    });
+    const { data: inserted, error } = await supabase
+      .from("league_messages")
+      .insert({
+        league_id: league.id,
+        user_id: user.id,
+        content: text,
+      })
+      .select("id, league_id, user_id, content, created_at")
+      .single();
     if (error) {
       console.error(error);
       alert("Failed to send message.");
+    } else if (inserted) {
+      // Optimistic add so the message appears immediately; realtime will also append
+      setChat((prev) => [...prev, inserted as ChatMsg]);
     }
     // Fire-and-forget: request push notifications to league members (exclude sender)
     try {
