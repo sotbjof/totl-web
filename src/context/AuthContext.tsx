@@ -71,6 +71,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Auto-register OneSignal Player ID (native) when signed in
+  useEffect(() => {
+    if (!user || !session) return;
+    let cancelled = false;
+
+    async function attemptRegister() {
+      try {
+        // Prefer global despia if present (native runtime)
+        const g: any = (globalThis as any);
+        let pid: string | null = null;
+        if (g && g.despia) {
+          const d = g.despia;
+          pid = d?.onesignalplayerid || null;
+        } else {
+          try {
+            const modName = 'despia-native';
+            // @ts-ignore
+            const mod = await import(/* @vite-ignore */ modName);
+            const despia: any = mod?.default;
+            pid = despia?.onesignalplayerid || null;
+          } catch {}
+        }
+
+        if (!pid || cancelled) return;
+
+        const lsKey = `totl:last_pid:${user.id}`;
+        const last = localStorage.getItem(lsKey);
+        if (last === pid) return; // already registered this pid
+
+        await fetch('/.netlify/functions/registerPlayer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({ playerId: pid, platform: 'ios' }),
+        }).catch(() => {});
+
+        localStorage.setItem(lsKey, pid);
+      } catch {
+        /* noop */
+      }
+    }
+
+    attemptRegister();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, session?.access_token]);
+
   async function signOut() {
     await supabase.auth.signOut();
   }
