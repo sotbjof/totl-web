@@ -676,6 +676,15 @@ export default function LeaguePage() {
       console.error(error);
       alert("Failed to send message.");
     }
+    // Fire-and-forget: request push notifications to league members (exclude sender)
+    try {
+      const senderName = user.user_metadata?.display_name || user.email || 'User';
+      fetch('/.netlify/functions/notifyLeagueMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leagueId: league.id, senderId: user.id, senderName, content: text })
+      });
+    } catch (_) { /* ignore */ }
   }
 
   /* ---------- load fixtures + picks + submissions + results for selected GW ---------- */
