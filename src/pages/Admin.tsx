@@ -26,36 +26,66 @@ function getTeamInitials(code: string | null): string {
 function parseKickoffToISO(kickoffText: string): string | null {
   if (!kickoffText) return null;
   
-  // Try format with time: "Fri 15:30 Fri 15th Aug"
+  // Try format with time: "Fri 15:30 Fri 15th Aug" or "Thu 17:30 Thu 1st Jan"
   let m = kickoffText.match(/^[A-Za-z]{3}\s+(\d{1,2}):(\d{2})\s+[A-Za-z]{3}\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3})/);
   if (m) {
     const [, hh, mm, dayStr, monStr] = m;
-    const monthMap: Record<string, string> = {
-      Jan: "01", Feb: "02", Mar: "03", Apr: "04",
-      May: "05", Jun: "06", Jul: "07", Aug: "08",
-      Sep: "09", Oct: "10", Nov: "11", Dec: "12",
+    const monthMap: Record<string, number> = {
+      Jan: 0, Feb: 1, Mar: 2, Apr: 3,
+      May: 4, Jun: 5, Jul: 6, Aug: 7,
+      Sep: 8, Oct: 9, Nov: 10, Dec: 11,
     };
-    const month = monthMap[monStr];
-    if (!month) return null;
-    const year = new Date().getFullYear();
-    const day = dayStr.padStart(2, "0");
-    return `${year}-${month}-${day}T${hh}:${mm}:00`;
+    const monthIndex = monthMap[monStr];
+    if (monthIndex === undefined) return null;
+    
+    // Determine year: if we're in Dec and the month is Jan, use next year
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11
+    let year = currentYear;
+    if (currentMonth === 11 && monthIndex === 0) {
+      // We're in December and the fixture is in January - use next year
+      year = currentYear + 1;
+    }
+    
+    const day = parseInt(dayStr, 10);
+    const hour = parseInt(hh, 10);
+    const minute = parseInt(mm, 10);
+    
+    // Create date in local timezone to avoid timezone conversion issues
+    const date = new Date(year, monthIndex, day, hour, minute);
+    // Return as ISO string (will include timezone offset)
+    return date.toISOString();
   }
   
   // Try format without time: "Fri 15 Aug" - default to 15:00
   m = kickoffText.match(/^[A-Za-z]{3}\s+(\d{1,2})\s+([A-Za-z]{3})/);
   if (m) {
     const [, dayStr, monStr] = m;
-    const monthMap: Record<string, string> = {
-      Jan: "01", Feb: "02", Mar: "03", Apr: "04",
-      May: "05", Jun: "06", Jul: "07", Aug: "08",
-      Sep: "09", Oct: "10", Nov: "11", Dec: "12",
+    const monthMap: Record<string, number> = {
+      Jan: 0, Feb: 1, Mar: 2, Apr: 3,
+      May: 4, Jun: 5, Jul: 6, Aug: 7,
+      Sep: 8, Oct: 9, Nov: 10, Dec: 11,
     };
-    const month = monthMap[monStr];
-    if (!month) return null;
-    const year = new Date().getFullYear();
-    const day = dayStr.padStart(2, "0");
-    return `${year}-${month}-${day}T15:00:00`; // Default to 15:00
+    const monthIndex = monthMap[monStr];
+    if (monthIndex === undefined) return null;
+    
+    // Determine year: if we're in Dec and the month is Jan, use next year
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11
+    let year = currentYear;
+    if (currentMonth === 11 && monthIndex === 0) {
+      // We're in December and the fixture is in January - use next year
+      year = currentYear + 1;
+    }
+    
+    const day = parseInt(dayStr, 10);
+    
+    // Create date in local timezone, default to 15:00
+    const date = new Date(year, monthIndex, day, 15, 0);
+    // Return as ISO string (will include timezone offset)
+    return date.toISOString();
   }
   
   return null;
