@@ -14,9 +14,9 @@ import CreateLeaguePage from "./pages/CreateLeague";
 import HowToPlayPage from "./pages/HowToPlay";
 import NewPredictionsCentre from "./pages/NewPredictionsCentre";
 import ProfilePage from "./pages/Profile";
-import PrivacyPage from "./pages/Privacy";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import PredictionsBanner from "./components/PredictionsBanner";
+import PrivacyPage from "./pages/Privacy";
 import BottomNav from "./components/BottomNav";
 import SignIn from "./pages/SignIn";
 
@@ -43,8 +43,8 @@ function AppContent({ menuOpen, setMenuOpen }: {
   const location = useLocation();
   const { user, showWelcome, dismissWelcome, signOut } = useAuth();
   
-  // Admin user IDs (Jof and ThomasJamesBird)
-  const isAdmin = user?.id === '4542c037-5b38-40d0-b189-847b8f17c222' || user?.id === '36f31625-6d6c-4aa4-815a-1493a812841b';
+  // Admin user ID (Jof)
+  const isAdmin = user?.id === '4542c037-5b38-40d0-b189-847b8f17c222';
   
   // Hide header/banner for full-screen pages
   const isFullScreenPage = false;
@@ -181,7 +181,7 @@ function AppContent({ menuOpen, setMenuOpen }: {
         <Route path="/predictions" element={<RequireAuth><PredictionsPage /></RequireAuth>} />
         <Route path="/global" element={<RequireAuth><GlobalPage /></RequireAuth>} />
         <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
-        <Route path="/privacy" element={<RequireAuth><PrivacyPage /></RequireAuth>} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/how-to-play" element={<RequireAuth><HowToPlayPage /></RequireAuth>} />
         <Route path="/create-league" element={<RequireAuth><CreateLeaguePage /></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />
