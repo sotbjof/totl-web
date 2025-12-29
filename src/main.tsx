@@ -14,6 +14,7 @@ import CreateLeaguePage from "./pages/CreateLeague";
 import HowToPlayPage from "./pages/HowToPlay";
 import NewPredictionsCentre from "./pages/NewPredictionsCentre";
 import ProfilePage from "./pages/Profile";
+import PrivacyPage from "./pages/Privacy";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import PredictionsBanner from "./components/PredictionsBanner";
 import BottomNav from "./components/BottomNav";
@@ -180,6 +181,7 @@ function AppContent({ menuOpen, setMenuOpen }: {
         <Route path="/predictions" element={<RequireAuth><PredictionsPage /></RequireAuth>} />
         <Route path="/global" element={<RequireAuth><GlobalPage /></RequireAuth>} />
         <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+        <Route path="/privacy" element={<RequireAuth><PrivacyPage /></RequireAuth>} />
         <Route path="/how-to-play" element={<RequireAuth><HowToPlayPage /></RequireAuth>} />
         <Route path="/create-league" element={<RequireAuth><CreateLeaguePage /></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AdminPage /></RequireAuth>} />
